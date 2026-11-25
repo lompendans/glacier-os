@@ -32,7 +32,9 @@ install -Dm755 /tmp/floe-target/release/floe "$A/usr/local/bin/floe"
 echo ":: frost shell + configs"
 mkdir -p "$A/usr/share/frost"
 cp -r "$SRC/frost/quickshell" "$A/usr/share/frost/quickshell"
-install -Dm755 "$SRC/frost/bin/frost-qs" "$A/usr/local/bin/frost-qs"
+cp -r "$SRC/frost/greeter"    "$A/usr/share/frost/greeter"
+install -Dm755 "$SRC/frost/bin/frost-qs"      "$A/usr/local/bin/frost-qs"
+install -Dm755 "$SRC/frost/bin/frost-greeter" "$A/usr/local/bin/frost-greeter"
 install -Dm644 "$SRC/frost/hypr/hyprland.lua"  "$A/etc/skel/.config/hypr/hyprland.lua"
 install -Dm644 "$SRC/frost/foot/foot.ini"      "$A/etc/skel/.config/foot/foot.ini"
 install -Dm644 "$SRC/frost/mako/config"        "$A/etc/skel/.config/mako/config"
@@ -71,7 +73,7 @@ sed -i \
   -e 's/^iso_application=.*/iso_application="Glacier OS Live"/' \
   "$P/profiledef.sh"
 # file permissions for our executables / sudoers
-sed -i 's|^file_permissions=(|file_permissions=(\n  ["/usr/local/bin/floe"]="0:0:755"\n  ["/usr/local/bin/glacier-live-setup"]="0:0:755"\n  ["/usr/local/bin/glacier-install"]="0:0:755"\n  ["/usr/local/bin/frost-qs"]="0:0:755"\n  ["/etc/sudoers.d/glacier-live"]="0:0:440"|' "$P/profiledef.sh"
+sed -i 's|^file_permissions=(|file_permissions=(\n  ["/usr/local/bin/floe"]="0:0:755"\n  ["/usr/local/bin/glacier-live-setup"]="0:0:755"\n  ["/usr/local/bin/glacier-install"]="0:0:755"\n  ["/usr/local/bin/frost-qs"]="0:0:755"\n  ["/usr/local/bin/frost-greeter"]="0:0:755"\n  ["/etc/sudoers.d/glacier-live"]="0:0:440"|' "$P/profiledef.sh"
 # boot splash (BIOS menu)
 rsvg-convert -w 640 -h 480 "$SRC/frost/wallpaper/splash.svg" -o "$P/syslinux/splash.png"
 # 2 GiB of RAM-backed write space so floe can install packages in the live session

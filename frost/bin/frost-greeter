@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Launch Hyprland with the Frost graphical login screen (invoked by greetd).
+export QT_QPA_PLATFORM=wayland
+export QT_QUICK_CONTROLS_STYLE=Basic
+export XCURSOR_SIZE=24
+export HYPRCURSOR_SIZE=24
+exec start-hyprland -- -c /usr/share/frost/greeter/hyprland.lua

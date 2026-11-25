@@ -10,10 +10,40 @@ ShellRoot {
     id: app
 
     // ---- state ----
-    property int page: 0                         // 0 welcome · 1 disk · 2 account · 3 region · 4 review · 5 installing · 6 done
-    readonly property var steps: ["Welcome", "Disk", "Account", "Region", "Install"]
+    property int page: 0                         // 0 welcome · 1 disk · 2 region · 3 account · 4 review · 5 installing · 6 done
+    readonly property var steps: ["Welcome", "Disk", "Region", "Account", "Install"]
     property var disks: []
     property string disk: ""
+    property string kbName: "English (US)"
+    property string kbLayout: "us"
+    property string kbVariant: ""
+    property string keymap: "us"
+    readonly property var keyboards: [
+        { name: "English (US)",        xkb: "us",  variant: "",  keymap: "us" },
+        { name: "English (UK)",        xkb: "gb",  variant: "",  keymap: "uk" },
+        { name: "Turkish (Q)",         xkb: "tr",  variant: "",  keymap: "trq" },
+        { name: "Turkish (F)",         xkb: "tr",  variant: "f", keymap: "trf" },
+        { name: "German",              xkb: "de",  variant: "",  keymap: "de-latin1" },
+        { name: "French",              xkb: "fr",  variant: "",  keymap: "fr" },
+        { name: "Spanish",             xkb: "es",  variant: "",  keymap: "es" },
+        { name: "Italian",             xkb: "it",  variant: "",  keymap: "it" },
+        { name: "Portuguese",          xkb: "pt",  variant: "",  keymap: "pt-latin1" },
+        { name: "Portuguese (Brazil)", xkb: "br",  variant: "",  keymap: "br-abnt2" },
+        { name: "Dutch",               xkb: "nl",  variant: "",  keymap: "nl" },
+        { name: "Polish",              xkb: "pl",  variant: "",  keymap: "pl" },
+        { name: "Russian",             xkb: "ru",  variant: "",  keymap: "ru" },
+        { name: "Ukrainian",           xkb: "ua",  variant: "",  keymap: "ua" },
+        { name: "Swedish",             xkb: "se",  variant: "",  keymap: "sv-latin1" },
+        { name: "Norwegian",           xkb: "no",  variant: "",  keymap: "no" },
+        { name: "Danish",              xkb: "dk",  variant: "",  keymap: "dk" },
+        { name: "Finnish",             xkb: "fi",  variant: "",  keymap: "fi" },
+        { name: "Czech",               xkb: "cz",  variant: "",  keymap: "cz-lat2" },
+        { name: "Hungarian",           xkb: "hu",  variant: "",  keymap: "hu" },
+        { name: "Greek",               xkb: "gr",  variant: "",  keymap: "gr" },
+        { name: "Japanese",            xkb: "jp",  variant: "",  keymap: "jp106" },
+        { name: "Korean",              xkb: "kr",  variant: "",  keymap: "us" },
+        { name: "Arabic",              xkb: "ara", variant: "",  keymap: "us" }
+    ]
     property string fullName: ""
     property string userName: ""
     property bool userEdited: false
@@ -33,8 +63,18 @@ ShellRoot {
     readonly property bool hostValid: /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/.test(hostName)
     readonly property bool passValid: password.length >= 4 && password === password2
     readonly property bool canNext: page === 0 || (page === 1 && disk !== "")
-                                    || (page === 2 && userValid && hostValid && passValid && fullName.indexOf(":") === -1)
-                                    || (page === 3 && timezone !== "")
+                                    || (page === 2 && timezone !== "" && kbLayout !== "")
+                                    || (page === 3 && userValid && hostValid && passValid && fullName.indexOf(":") === -1)
+
+    function selectKeyboard(kb) {
+        kbName = kb.name
+        kbLayout = kb.xkb
+        kbVariant = kb.variant
+        keymap = kb.keymap
+        // apply live in Hyprland so the user can type their password with this layout immediately
+        Quickshell.execDetached(["hyprctl", "keyword", "input:kb_layout", kb.xkb])
+        Quickshell.execDetached(["hyprctl", "keyword", "input:kb_variant", kb.variant])
+    }
 
     onFullNameChanged: if (!userEdited) userName = fullName.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9_-]/g, "")
 
@@ -84,7 +124,9 @@ ShellRoot {
 
     function startInstall() {
         const cmd = ["sudo", "-n", "/usr/local/bin/glacier-install", "--disk", disk, "--user", userName,
-                     "--fullname", fullName.trim(), "--hostname", hostName, "--timezone", timezone, "--yes-wipe-disk"]
+                     "--fullname", fullName.trim(), "--hostname", hostName, "--timezone", timezone,
+                     "--keymap", keymap, "--xkb-layout", kbLayout, "--yes-wipe-disk"]
+        if (kbVariant !== "") cmd.push("--xkb-variant", kbVariant)
         if (autologin) cmd.push("--autologin")
         error = ""; progress = 0; status = "Starting"
         installer.command = cmd
@@ -225,9 +267,67 @@ ShellRoot {
                 Text { visible: app.disks.length === 0; color: "#ffcb6b"; font.family: "Inter"; font.pixelSize: 13; text: diskProc.running ? "Looking for disks…" : "No disks found to install to." }
             }
 
-            // 2 — account
+            // 2 — region (keyboard layout + time zone)
             Column {
                 visible: app.page === 2
+                width: parent.width
+                spacing: 12
+                Text { text: "Keyboard & region"; color: "white"; font.family: "Inter"; font.pixelSize: 24; font.weight: Font.Bold }
+                Row {
+                    width: parent.width
+                    spacing: 16
+
+                    // Keyboard layout column
+                    Column {
+                        width: (pageArea.width - 16) / 2
+                        spacing: 8
+                        GlassField { width: parent.width; label: "Keyboard layout"; text: ""; onEdited: v => kbList.filter = v.toLowerCase() }
+                        ListView {
+                            id: kbList
+                            property string filter: ""
+                            width: parent.width; height: 270
+                            clip: true
+                            model: app.keyboards.filter(k => filter === "" || k.name.toLowerCase().indexOf(filter) !== -1 || k.xkb.toLowerCase().indexOf(filter) !== -1)
+                            delegate: Rectangle {
+                                required property var modelData
+                                readonly property bool selected: app.kbName === modelData.name
+                                width: kbList.width; height: 34; radius: 10
+                                color: selected ? Qt.rgba(0.35, 0.78, 0.98, 0.25) : (km.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
+                                Text { x: 12; anchors.verticalCenter: parent.verticalCenter; text: modelData.name; color: "white"; font.family: "Inter"; font.pixelSize: 13 }
+                                Text { anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter } text: modelData.xkb.toUpperCase(); color: Qt.rgba(1, 1, 1, 0.45); font.family: "JetBrains Mono"; font.pixelSize: 11 }
+                                MouseArea { id: km; anchors.fill: parent; hoverEnabled: true; onClicked: app.selectKeyboard(modelData) }
+                            }
+                        }
+                        Text { width: parent.width; elide: Text.ElideRight; text: "Layout: " + app.kbName; color: Qt.rgba(1, 1, 1, 0.7); font.family: "Inter"; font.pixelSize: 12 }
+                    }
+
+                    // Time zone column
+                    Column {
+                        width: (pageArea.width - 16) / 2
+                        spacing: 8
+                        GlassField { id: tzSearch; width: parent.width; label: "Time zone"; text: ""; onEdited: v => tzList.filter = v.toLowerCase() }
+                        ListView {
+                            id: tzList
+                            property string filter: ""
+                            width: parent.width; height: 270
+                            clip: true
+                            model: app.timezones.filter(t => filter === "" || t.toLowerCase().indexOf(filter) !== -1)
+                            delegate: Rectangle {
+                                required property string modelData
+                                width: tzList.width; height: 34; radius: 10
+                                color: app.timezone === modelData ? Qt.rgba(0.35, 0.78, 0.98, 0.25) : (tm.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
+                                Text { x: 12; width: parent.width - 24; elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter; text: modelData.replace(/_/g, " "); color: "white"; font.family: "Inter"; font.pixelSize: 13 }
+                                MouseArea { id: tm; anchors.fill: parent; hoverEnabled: true; onClicked: app.timezone = modelData }
+                            }
+                        }
+                        Text { width: parent.width; elide: Text.ElideRight; text: "Zone: " + app.timezone; color: Qt.rgba(1, 1, 1, 0.7); font.family: "Inter"; font.pixelSize: 12 }
+                    }
+                }
+            }
+
+            // 3 — account
+            Column {
+                visible: app.page === 3
                 width: parent.width
                 spacing: 10
                 Text { text: "Who will use this computer?"; color: "white"; font.family: "Inter"; font.pixelSize: 24; font.weight: Font.Bold; bottomPadding: 6 }
@@ -248,30 +348,6 @@ ShellRoot {
                 }
             }
 
-            // 3 — region
-            Column {
-                visible: app.page === 3
-                width: parent.width
-                spacing: 10
-                Text { text: "Time zone"; color: "white"; font.family: "Inter"; font.pixelSize: 24; font.weight: Font.Bold }
-                GlassField { id: tzSearch; label: "Search"; text: ""; onEdited: v => tzList.filter = v.toLowerCase() }
-                ListView {
-                    id: tzList
-                    property string filter: ""
-                    width: parent.width; height: 270
-                    clip: true
-                    model: app.timezones.filter(t => filter === "" || t.toLowerCase().indexOf(filter) !== -1)
-                    delegate: Rectangle {
-                        required property string modelData
-                        width: tzList.width; height: 34; radius: 10
-                        color: app.timezone === modelData ? Qt.rgba(0.35, 0.78, 0.98, 0.25) : (tm.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
-                        Text { x: 12; anchors.verticalCenter: parent.verticalCenter; text: modelData.replace(/_/g, " "); color: "white"; font.family: "Inter"; font.pixelSize: 13 }
-                        MouseArea { id: tm; anchors.fill: parent; hoverEnabled: true; onClicked: app.timezone = modelData }
-                    }
-                }
-                Text { text: "Selected: " + app.timezone; color: Qt.rgba(1, 1, 1, 0.7); font.family: "Inter"; font.pixelSize: 13 }
-            }
-
             // 4 — review
             Column {
                 visible: app.page === 4
@@ -287,8 +363,8 @@ ShellRoot {
                         // label, value, label, value, … (one grid cell per string)
                         Repeater {
                             model: ["Disk", app.disk !== "" ? app.disk + "  (will be erased)" : "", "Name", app.fullName, "User", app.userName,
-                                    "Computer", app.hostName, "Time zone", app.timezone,
-                                    "Sign-in", app.autologin ? "automatic" : "password", "Boot", "GRUB · BIOS and UEFI"]
+                                    "Computer", app.hostName, "Keyboard", app.kbName, "Time zone", app.timezone,
+                                    "Sign-in", app.autologin ? "automatic" : "Frost login screen", "Boot", "GRUB · BIOS and UEFI"]
                             Text {
                                 required property string modelData
                                 required property int index

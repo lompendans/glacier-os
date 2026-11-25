@@ -76,6 +76,7 @@ hl.config({
     dwindle    = { preserve_split = true },
     input = {
         kb_layout    = "us",
+        kb_variant   = "",
         follow_mouse = 1,
         touchpad     = { natural_scroll = true },
     },

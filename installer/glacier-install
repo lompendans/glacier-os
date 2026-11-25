@@ -55,7 +55,7 @@ cleanup() {
 
 # ---------- arguments ----------
 DISK="" USER_NAME="" FULLNAME="" HOST="glacier" TZONE="UTC" LOCALE="en_US.UTF-8" KEYMAP="us"
-AUTOLOGIN=0 WIPE=0
+XKB_LAYOUT="us" XKB_VARIANT="" AUTOLOGIN=0 WIPE=0
 [ $# -gt 0 ] || { sed -n '2,15p' "$0"; exit 1; }
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -67,6 +67,8 @@ while [ $# -gt 0 ]; do
     --timezone) TZONE="$2"; shift ;;
     --locale) LOCALE="$2"; shift ;;
     --keymap) KEYMAP="$2"; shift ;;
+    --xkb-layout) XKB_LAYOUT="$2"; shift ;;
+    --xkb-variant) XKB_VARIANT="$2"; shift ;;
     --autologin) AUTOLOGIN=1 ;;
     --yes-wipe-disk) WIPE=1 ;;
     *) die "unknown option: $1" ;;
@@ -85,6 +87,9 @@ case "$USER_NAME" in root|bin|daemon|nobody|glacier-live) die "user name '$USER_
 [[ "$HOST" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]] || die "invalid hostname '$HOST'"
 [ -e "/usr/share/zoneinfo/$TZONE" ] || die "unknown timezone '$TZONE'"
 grep -q "^#\?${LOCALE//./\\.} " /etc/locale.gen || die "unknown locale '$LOCALE'"
+[[ "$KEYMAP" =~ ^[a-zA-Z0-9_.-]+$ ]] || die "invalid keymap '$KEYMAP'"
+[[ "$XKB_LAYOUT" =~ ^[a-zA-Z0-9_-]+$ ]] || die "invalid keyboard layout '$XKB_LAYOUT'"
+[[ "$XKB_VARIANT" =~ ^[a-zA-Z0-9_-]*$ ]] || die "invalid keyboard variant '$XKB_VARIANT'"
 [[ "$FULLNAME" != *:* ]] || die "full name must not contain ':'"
 [ "$WIPE" = 1 ] || die "refusing to erase $DISK without --yes-wipe-disk"
 IFS= read -r PASSWORD || true
@@ -182,6 +187,14 @@ cat > "$MNT/etc/hosts" <<EOF
 ::1       localhost
 127.0.1.1 $HOST.localdomain $HOST
 EOF
+# apply chosen keyboard layout to Hyprland skeleton and Frost greeter before useradd copies /etc/skel
+for cfg in "$MNT/etc/skel/.config/hypr/hyprland.lua" "$MNT/usr/share/frost/greeter/hyprland.lua"; do
+  [ -f "$cfg" ] || continue
+  sed -i \
+    -e "s/kb_layout[[:space:]]*=[[:space:]]*\"[^\"]*\"/kb_layout    = \"$XKB_LAYOUT\"/" \
+    -e "s/kb_variant[[:space:]]*=[[:space:]]*\"[^\"]*\"/kb_variant   = \"$XKB_VARIANT\"/" \
+    "$cfg"
+done
 GRUB_ARGS="--target=i386-pc $DISK"
 arch-chroot "$MNT" /bin/bash -s -- "$TZONE" "$LOCALE" "$KEYMAP" "$USER_NAME" "$FULLNAME" <<'CHROOT'
 set -euo pipefail
@@ -201,14 +214,26 @@ pacman-key --populate archlinux >/dev/null 2>&1
 CHROOT
 printf '%s:%s\n' "$USER_NAME" "$PASSWORD" | arch-chroot "$MNT" chpasswd
 
-if [ "$AUTOLOGIN" = 1 ]; then
-  mkdir -p "$MNT/etc/systemd/system/getty@tty1.service.d"
-  cat > "$MNT/etc/systemd/system/getty@tty1.service.d/autologin.conf" <<EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --noclear --autologin $USER_NAME - \$TERM
-EOF
-fi
+# Graphical login screen (greetd + Frost greeter); autologin uses greetd's [initial_session]
+# so logging out still lands cleanly on the Frost login screen.
+mkdir -p "$MNT/etc/greetd"
+{
+  echo "[terminal]"
+  echo "vt = 1"
+  echo ""
+  if [ "$AUTOLOGIN" = 1 ]; then
+    echo "[initial_session]"
+    echo 'command = "start-hyprland"'
+    echo "user = \"$USER_NAME\""
+    echo ""
+  fi
+  echo "[default_session]"
+  echo 'command = "frost-greeter"'
+  echo 'user = "greeter"'
+} > "$MNT/etc/greetd/config.toml"
+mkdir -p "$MNT/etc/systemd/system/multi-user.target.wants"
+ln -sf /usr/lib/systemd/system/greetd.service "$MNT/etc/systemd/system/multi-user.target.wants/greetd.service"
+ln -sf /dev/null "$MNT/etc/systemd/system/getty@tty1.service"
 
 progress 82 "Building the boot image"
 # archiso trimmed the kernel preset to a single image; restore Arch's standard one

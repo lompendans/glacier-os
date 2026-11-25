@@ -46,11 +46,17 @@ IN="qs -p /src/installer/ui"
 $IN >/tmp/installer.log 2>&1 &
 sleep 5
 for p in 0 1 2 3 4; do $IN ipc call installer goto $p; sleep 1.5; grim /tmp/installer-$p.png; done
+pkill -f "installer/ui" || true
+sleep 1
+# greeter UI: render the Frost login screen
+qs -p /src/frost/greeter >/tmp/greeter.log 2>&1 &
+sleep 5
+grim /tmp/greeter.png
 EOF
 su t -c "bash /tmp/run.sh" || true
 cp /tmp/*.png "$OUT"/ 2>/dev/null || true
-cp /tmp/qs.log /tmp/installer.log "$OUT"/ 2>/dev/null || true
-for log in qs installer; do
+cp /tmp/qs.log /tmp/installer.log /tmp/greeter.log "$OUT"/ 2>/dev/null || true
+for log in qs installer greeter; do
   echo "---- $log log (warnings/errors) ----"
   grep -i -E "warn|error|fail|cannot|not a type|undefined|unavailable" "$OUT/$log.log" || echo "(none)"
 done
