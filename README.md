@@ -1,3 +1,5 @@
+## This project was made with AI.
+
 # Glacier OS
 
 An Arch-based Linux distribution with a liquid-glass desktop (**Frost**) and its own
