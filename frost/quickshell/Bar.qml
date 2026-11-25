@@ -16,6 +16,7 @@ PanelWindow {
     WlrLayershell.namespace: "frost-bar"
 
     readonly property var sink: Pipewire.defaultAudioSink
+    readonly property var activeWindow: ToplevelManager.activeToplevel
     PwObjectTracker { objects: bar.sink ? [bar.sink] : [] }
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
@@ -31,8 +32,9 @@ PanelWindow {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 leftPadding: 8
+                rightPadding: bar.activeWindow ? 4 : 0
                 text: {
-                    const t = ToplevelManager.activeToplevel
+                    const t = bar.activeWindow
                     if (!t) return "Desktop"
                     const id = t.appId || ""
                     // Quickshell windows (e.g. the installer) all share one app id: use their title
@@ -44,6 +46,13 @@ PanelWindow {
                 font.family: Theme.font
                 font.pixelSize: 13
                 font.weight: Font.Bold
+            }
+            IconButton {
+                visible: bar.activeWindow !== null
+                icon: "close"
+                iconSize: 13
+                hoverColor: Qt.rgba(1, 0.38, 0.44, 0.45)
+                onClicked: if (bar.activeWindow) bar.activeWindow.close()
             }
         }
 

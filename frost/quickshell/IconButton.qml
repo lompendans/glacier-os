@@ -7,12 +7,13 @@ Rectangle {
     property string label: ""
     property bool active: false
     property int iconSize: 16
+    property color hoverColor: Theme.hover
     signal clicked()
 
     implicitHeight: 28
     implicitWidth: row.implicitWidth + 20
     radius: 9
-    color: (mouse.containsMouse || active) ? Theme.hover : "transparent"
+    color: (mouse.containsMouse || active) ? hoverColor : "transparent"
     Behavior on color { ColorAnimation { duration: 120 } }
 
     Row {

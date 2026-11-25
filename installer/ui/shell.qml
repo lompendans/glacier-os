@@ -153,6 +153,29 @@ ShellRoot {
         }
         Rectangle { x: 240; y: 24; width: 1; height: parent.height - 48; color: Qt.rgba(1, 1, 1, 0.1) }
 
+        // top-right window close button (hidden while an install is actively writing to disk)
+        Rectangle {
+            visible: !installer.running
+            anchors { top: parent.top; right: parent.right; topMargin: 18; rightMargin: 18 }
+            width: 30; height: 30; radius: 15
+            color: closeMouse.pressed ? "#c23a4b" : (closeMouse.containsMouse ? "#e5485b" : Qt.rgba(1, 1, 1, 0.12))
+            border.width: 1
+            border.color: closeMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.35) : Qt.rgba(1, 1, 1, 0.16)
+            Behavior on color { ColorAnimation { duration: 120 } }
+            Image {
+                anchors.centerIn: parent
+                source: "close.svg"
+                sourceSize.width: 13; sourceSize.height: 13
+                opacity: closeMouse.containsMouse ? 1.0 : 0.8
+            }
+            MouseArea {
+                id: closeMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: Qt.quit()
+            }
+        }
+
         // page area
         Item {
             id: pageArea
