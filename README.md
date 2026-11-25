@@ -102,3 +102,5 @@ bash /src/frost/test/headless.sh      # renders the shell headless → out/shots
 3. A graphical Floe Store (the launcher's package search is the first step)
 4. Settings app: accent colour, glass strength, wallpapers
 5. Glacier package repository (signed) for Frost and floe themselves
+
+[![Architecture diagram of lompendans/glacier-os](https://gitdiagram.com/lompendans/glacier-os/diagram.png)](https://gitdiagram.com/lompendans/glacier-os?utm_source=readme&utm_medium=picture)
