@@ -104,6 +104,8 @@ size=1MiB, type=21686148-6449-6E6F-744E-656564454649, name="bios"
 size=1GiB, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name="efi"
 type=4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709, name="glacier"
 EOF
+# mark the protective MBR bootable so strict legacy BIOSes (e.g. VirtualBox) boot GPT disks
+parted -s "$DISK" disk_set pmbr_boot on 2>/dev/null || true
 partprobe "$DISK" 2>/dev/null || true
 udevadm settle
 EFI_PART="$(part "$DISK" 2)"; ROOT_PART="$(part "$DISK" 3)"
@@ -161,7 +163,7 @@ rm -rf \
   "$R/usr/local/bin/glacier-install" "$R/usr/share/glacier-installer" \
   "$R/usr/share/applications/glacier-installer.desktop"
 for unit in sshd.service hv_fcopy_daemon.service hv_kvp_daemon.service hv_vss_daemon.service \
-            vboxservice.service vmtoolsd.service vmware-vmblock-fuse.service ModemManager.service; do
+            vmtoolsd.service vmware-vmblock-fuse.service ModemManager.service; do
   rm -f "$R/etc/systemd/system/multi-user.target.wants/$unit"
 done
 rm -f "$R/etc/systemd/system/dbus-org.freedesktop.ModemManager1.service"
@@ -228,18 +230,19 @@ sed -i \
   -e 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=4/' \
   -e 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=3"/' \
   -e 's/^#\?GRUB_TERMINAL_OUTPUT=.*/GRUB_TERMINAL_OUTPUT="gfxterm"/' \
-  -e 's/^#\?GRUB_GFXMODE=.*/GRUB_GFXMODE=auto/' \
+  -e 's/^#\?GRUB_GFXMODE=.*/GRUB_GFXMODE="1280x800,1024x768,auto"/' \
+  -e 's/^GRUB_GFXPAYLOAD_LINUX=.*/#GRUB_GFXPAYLOAD_LINUX=keep/' \
   -e 's|^#\?GRUB_THEME=.*|GRUB_THEME="/boot/grub/themes/glacier/theme.txt"|' \
   "$MNT/etc/default/grub"
 grep -q '^GRUB_THEME=' "$MNT/etc/default/grub" || echo 'GRUB_THEME="/boot/grub/themes/glacier/theme.txt"' >> "$MNT/etc/default/grub"
 # BIOS boot code always (the disk then also boots on BIOS machines) ...
 arch-chroot "$MNT" grub-install $GRUB_ARGS >/dev/null 2>&1 || die "grub-install (BIOS) failed"
-# ... and UEFI when booted that way (named entry + the fallback path for fresh firmware)
+# ... and the UEFI fallback path (\EFI\BOOT\BOOTX64.EFI) always, so the disk boots in UEFI even if
+# installed from BIOS or on firmwares with non-persistent NVRAM (e.g. VirtualBox)
+arch-chroot "$MNT" grub-install --target=x86_64-efi --efi-directory=/boot --removable --no-nvram >/dev/null 2>&1 \
+  || die "grub-install (UEFI fallback) failed"
 if [ "$UEFI" = 1 ]; then
-  arch-chroot "$MNT" grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Glacier >/dev/null 2>&1 \
-    || die "grub-install (UEFI) failed"
-  arch-chroot "$MNT" grub-install --target=x86_64-efi --efi-directory=/boot --removable >/dev/null 2>&1 \
-    || die "grub-install (UEFI fallback) failed"
+  arch-chroot "$MNT" grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Glacier >/dev/null 2>&1 || true
 fi
 arch-chroot "$MNT" grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1 || die "grub-mkconfig failed"
 # grub-mkconfig titles entries "<GRUB_DISTRIBUTOR> Linux"; show just the OS name
