@@ -1,9 +1,36 @@
+<p align="center">
+  <img src="docs/banner.png" alt="Glacier OS — liquid-glass desktop · floe package manager" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/lompendans/glacier-os/releases/latest"><b>Download the ISO</b></a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#building-windows--docker-desktop">Build it yourself</a>
+</p>
+
 ## This project was made with AI.
 
-# Glacier OS
+# <img src="docs/logo.png" alt="" width="36" align="top"> Glacier OS
 
 An Arch-based Linux distribution with a liquid-glass desktop (**Frost**) and its own
 package manager (**floe**). Version 0.1 "Floe" — early development.
+
+![The Frost desktop](docs/screenshots/desktop.jpg)
+
+## Screenshots
+
+All screenshots are taken from the real live ISO running in a virtual machine.
+
+| | |
+|---|---|
+| ![Installer](docs/screenshots/installer.jpg) | ![Launcher](docs/screenshots/launcher.jpg) |
+| **Installer** — opens on the live desktop; offline, BIOS + UEFI | **Launcher** — `Super+Space`, apps and packages in one search |
+| ![Package search](docs/screenshots/packages.jpg) | ![Control Center](docs/screenshots/cc.jpg) |
+| **Package search** — `Super+P`, powered by floe | **Control Center** — Wi-Fi, Bluetooth, Focus, volume, power |
+| ![floe in the terminal](docs/screenshots/floe.jpg) | ![Boot menu](docs/screenshots/grub.jpg) |
+| **floe** — pacman with generations and rollback | **Boot menu** — themed GRUB on the live USB and installed systems |
+
+## What's inside
 
 | Part | What it is | Where |
 |---|---|---|
@@ -17,9 +44,10 @@ package manager (**floe**). Version 0.1 "Floe" — early development.
 
 ## Status — what works and what doesn't yet
 
-- **Live ISO.** Boots to the Frost desktop as user `glacier` (password `glacier`, passwordless sudo in the live session). Verified in QEMU: autologin → Hyprland → Frost bar/dock/launcher, glass blur on windows, Super-key shortcuts, floe reading the live system.
+- **Live ISO** ([download](https://github.com/lompendans/glacier-os/releases/latest)). Boots to the Frost desktop as user `glacier` (password `glacier`, passwordless sudo in the live session). Verified in QEMU: autologin → Hyprland → Frost bar/dock/launcher, glass blur on windows, Super-key shortcuts, floe reading the live system.
 - Package lists are downloaded automatically once the network is up (`glacier-refresh-db.service`); until then `floe search` says to run `floe refresh`.
 - The live session has 2 GiB of RAM-backed write space for trying out installs; give the VM at least 4 GiB of RAM.
+- **VirtualBox:** set Display → Graphics Controller to **VMSVGA** and enable **3D Acceleration**.
 - **Installer.** Opens automatically in the live session (also in the dock). Verified end to end in QEMU: UEFI install onto an empty 24 GB disk → reboot → themed GRUB → login → Frost desktop, with the chosen user, hostname and time zone, sudo requiring a password and no failed units. The same disk also boots in BIOS mode.
 - The installer **erases the whole disk**. Dual-boot / choosing partitions is not supported yet. Layout: 1 MiB BIOS boot · 1 GiB EFI (FAT32, `/boot`) · ext4 root.
 - Installed systems log in on the text console (or automatically, if chosen in the installer) and then start Frost; there is no graphical login screen yet.
