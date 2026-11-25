@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glacier OS — UI Concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#5ac8fa;
+  --blur:22px;
+  --tint:.16;
+  --fg:#fff;
+  --fg2:rgba(255,255,255,.74);
+  --fg3:rgba(255,255,255,.5);
+  --hover:rgba(255,255,255,.14);
+  --line:rgba(255,255,255,.12);
+  --well:rgba(0,0,0,.18);
+  --under:rgba(14,18,36,.46);
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --bg1:#1a2550;--bg2:#070b18;--c1:#3a7bff;--c2:#ff4fa0;--c3:#1fe0c0;--c4:#ffb347;
+}
+body.wp-dusk{--bg1:#3b1a4a;--bg2:#120818;--c1:#ff6a3d;--c2:#9b5cff;--c3:#ff3d7f;--c4:#ffd36a}
+body.wp-lagoon{--bg1:#07304a;--bg2:#03121d;--c1:#00c6ff;--c2:#00ffa8;--c3:#2a5cff;--c4:#b2ff59}
+body.light{
+  --fg:#0d1426;--fg2:rgba(13,20,38,.72);--fg3:rgba(13,20,38,.5);
+  --hover:rgba(255,255,255,.35);--line:rgba(13,20,38,.1);--well:rgba(255,255,255,.35);
+  --under:rgba(255,255,255,.42);--tint:.38;
+  --bg1:#eef3ff;--bg2:#b8c6ec;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:Inter,system-ui,"Segoe UI",sans-serif;color:var(--fg);background:var(--bg2);user-select:none;-webkit-font-smoothing:antialiased;font-size:13px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:default}
+input{font:inherit;color:inherit;background:none;border:0;outline:0}
+
+/* ---------- wallpaper ---------- */
+#wall{position:fixed;inset:0;overflow:hidden;background:radial-gradient(120% 100% at 20% 0%,var(--bg1) 0%,var(--bg2) 70%);transition:background .6s}
+.blob{position:absolute;border-radius:50%;filter:blur(50px);opacity:.85;animation:drift 26s ease-in-out infinite alternate}
+.b1{width:60vw;height:60vw;left:-12vw;top:-18vw;background:radial-gradient(circle,var(--c1),transparent 65%)}
+.b2{width:50vw;height:50vw;right:-10vw;top:10vh;background:radial-gradient(circle,var(--c2),transparent 65%);animation-duration:32s;animation-delay:-8s}
+.b3{width:55vw;height:55vw;left:20vw;bottom:-30vw;background:radial-gradient(circle,var(--c3),transparent 65%);animation-duration:36s;animation-delay:-14s}
+.b4{width:30vw;height:30vw;left:45vw;top:-5vw;background:radial-gradient(circle,var(--c4),transparent 65%);animation-duration:22s;animation-delay:-4s}
+@keyframes drift{to{transform:translate(7vw,5vh) scale(1.15) rotate(25deg)}}
+#ribbons{position:absolute;inset:0;width:100%;height:100%;opacity:.55}
+body.light .blob{opacity:.6}
+#dim{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:99999;transition:opacity .15s}
+
+/* ---------- liquid glass material ---------- */
+.glass{
+  position:relative;isolation:isolate;
+  background:linear-gradient(150deg,rgba(255,255,255,calc(var(--tint) * 1.25)),rgba(255,255,255,calc(var(--tint) * .45)));
+  -webkit-backdrop-filter:blur(var(--blur)) saturate(185%) brightness(1.05);
+  backdrop-filter:blur(var(--blur)) saturate(185%) brightness(1.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    inset 0 -1px 0 rgba(255,255,255,.10),
+    inset 0 0 18px rgba(255,255,255,.06),
+    0 12px 40px rgba(0,0,0,.28),
+    0 2px 6px rgba(0,0,0,.12);
+}
+/* specular sheen */
+.glass::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(120% 60% at 15% 0%,rgba(255,255,255,.22),transparent 55%),
+    radial-gradient(80% 50% at 100% 100%,rgba(255,255,255,.08),transparent 60%);
+}
+/* refractive rim */
+.glass::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:2;
+  background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(255,255,255,.08) 35%,rgba(255,255,255,.04) 65%,rgba(255,255,255,.5));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+.glass.strong{background:linear-gradient(160deg,rgba(255,255,255,calc(var(--tint) * .95)),rgba(255,255,255,calc(var(--tint) * .35))),var(--under)}
+body.refract .glass.lens{
+  -webkit-backdrop-filter:blur(calc(var(--blur) * .35)) url(#lg) saturate(190%) brightness(1.06);
+  backdrop-filter:blur(calc(var(--blur) * .35)) url(#lg) saturate(190%) brightness(1.06);
+}
+
+/* ---------- top bar ---------- */
+#topbar{position:fixed;top:8px;left:10px;right:10px;height:36px;border-radius:14px;display:flex;align-items:center;padding:0 6px;z-index:9000;gap:6px}
+.tb-side{display:flex;align-items:center;gap:2px;flex:1;min-width:0}
+.tb-right{justify-content:flex-end}
+.tb-btn{height:28px;padding:0 10px;border-radius:9px;display:flex;align-items:center;gap:7px;font-weight:500;white-space:nowrap;transition:background .15s}
+.tb-btn:hover,.tb-btn.on{background:var(--hover)}
+.tb-btn svg{flex-shrink:0}
+#tb-app{font-weight:700}
+.tb-menu{color:var(--fg2)}
+#tb-clock{font-weight:600;font-variant-numeric:tabular-nums}
+.logo{width:20px;height:20px;border-radius:7px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#8a7dff);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+@media (max-width:980px){.tb-menu{display:none}}
+@media (max-width:640px){.tb-hide-s{display:none}}
+
+/* ---------- desktop / widgets ---------- */
+#desktop{position:fixed;inset:0;z-index:10}
+.widget{position:absolute;border-radius:26px;padding:18px 22px;z-index:1}
+#w-clock{right:28px;top:64px;width:240px}
+#w-clock .t{font-size:54px;font-weight:800;letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums}
+#w-clock .d{color:var(--fg2);font-weight:500;margin-top:6px}
+#w-clock .s{display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);color:var(--fg2);font-size:12px;align-items:center}
+.ok-dot{width:8px;height:8px;border-radius:50%;background:#3ee08f;box-shadow:0 0 10px #3ee08f}
+
+/* ---------- windows ---------- */
+.win{position:absolute;border-radius:22px;display:flex;flex-direction:column;overflow:hidden;min-width:340px;min-height:220px;
+  transition:opacity .22s,transform .22s cubic-bezier(.2,.9,.3,1.2);transform-origin:50% 100%}
+.win.hidden,.win.closing{opacity:0;transform:scale(.9) translateY(40px);pointer-events:none}
+.win.opening{opacity:0;transform:scale(.94)}
+.win.anim{transition:left .28s,top .28s,width .28s,height .28s,opacity .22s,transform .22s}
+.win:not(.focused){filter:saturate(.9)}
+.win:not(.focused) .title{opacity:.6}
+.win.max{left:10px!important;top:52px!important;width:calc(100% - 20px)!important;height:calc(100% - 52px - 100px)!important}
+.titlebar{height:44px;display:flex;align-items:center;padding:0 10px 0 14px;gap:10px;flex-shrink:0}
+.titlebar .ti{width:20px;height:20px}
+.title{flex:1;font-weight:600;font-size:13px;color:var(--fg)}
+.ctrls{display:flex;gap:6px}
+.ctrl{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--hover);color:var(--fg2);transition:background .15s,color .15s,transform .15s}
+.ctrl:hover{transform:scale(1.08);color:var(--fg)}
+.ctrl.close:hover{background:#ff5f6d;color:#fff}
+.wbody{flex:1;overflow:auto;position:relative;min-height:0}
+.resize{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;z-index:5}
+
+/* ---------- dock ---------- */
+#dock{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;align-items:flex-end;gap:6px;padding:9px 10px 13px;border-radius:28px;z-index:9000;height:78px}
+.dock-item{position:relative;width:var(--s,54px);height:var(--s,54px);flex-shrink:0;transition:width .14s ease-out,height .14s ease-out}
+.dock-item .tip{position:absolute;bottom:calc(100% + 14px);left:50%;transform:translateX(-50%) translateY(4px);padding:5px 10px;border-radius:10px;font-weight:600;font-size:12px;white-space:nowrap;opacity:0;pointer-events:none;transition:.15s}
+.dock-item:hover .tip{opacity:1;transform:translateX(-50%)}
+.dock-item .dot{position:absolute;bottom:-8px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--fg);opacity:0;transition:opacity .2s}
+.dock-item.running .dot{opacity:.85}
+.dock-item.bounce{animation:bounce .7s}
+@keyframes bounce{0%,100%{transform:none}30%{transform:translateY(-16px)}55%{transform:none}75%{transform:translateY(-6px)}}
+.dock-sep{width:1px;height:46px;background:var(--line);margin:0 5px;align-self:center;background:linear-gradient(transparent,rgba(255,255,255,.4),transparent)}
+
+/* app icons */
+.app-icon{width:100%;height:100%;border-radius:28%;display:grid;place-items:center;color:#fff;position:relative;overflow:hidden;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.7),inset 0 -3px 8px rgba(0,0,0,.18),0 6px 14px rgba(0,0,0,.25)}
+.app-icon::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 55%);opacity:.55}
+.app-icon::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+.app-icon svg{width:54%;height:54%;position:relative;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))}
+
+/* ---------- control center ---------- */
+#cc{position:fixed;top:52px;right:10px;width:330px;border-radius:24px;padding:14px;z-index:9500;display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  transition:opacity .2s,transform .25s cubic-bezier(.2,.9,.3,1.2);transform-origin:top right}
+#cc.hidden{opacity:0;transform:scale(.92) translateY(-8px);pointer-events:none}
+.tile{border-radius:18px;padding:12px;background:var(--well);display:flex;align-items:center;gap:10px;text-align:left;transition:background .15s}
+.tile .ic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--hover);flex-shrink:0;transition:.2s}
+.tile.on .ic{background:var(--accent);color:#fff;box-shadow:0 0 16px color-mix(in srgb,var(--accent) 60%,transparent)}
+.tile b{display:block;font-size:12.5px}
+.tile small{color:var(--fg3);font-size:11px}
+.wide{grid-column:1/-1}
+.slider-row{border-radius:18px;padding:12px 14px;background:var(--well)}
+.slider-row label{font-weight:600;font-size:12px;display:block;margin-bottom:8px}
+.sl{display:flex;align-items:center;gap:10px;color:var(--fg2)}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:22px;border-radius:11px;background:linear-gradient(90deg,rgba(255,255,255,.85) var(--p,50%),rgba(255,255,255,.15) var(--p,50%));box-shadow:inset 0 1px 2px rgba(0,0,0,.2)}
+body.light input[type=range]{background:linear-gradient(90deg,#fff var(--p,50%),rgba(13,20,38,.1) var(--p,50%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.np{display:flex;gap:12px;align-items:center}
+.np .art{width:44px;height:44px;border-radius:12px;background:conic-gradient(from 200deg,var(--c1),var(--c2),var(--c3),var(--c1));flex-shrink:0}
+.np .meta{flex:1;min-width:0}
+.np b{display:block;font-size:12.5px}
+.np small{color:var(--fg3)}
+
+/* ---------- launcher ---------- */
+#launcher{position:fixed;inset:0;z-index:9800;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh;background:rgba(0,0,0,.12);transition:opacity .18s}
+#launcher.hidden{opacity:0;pointer-events:none}
+.lx{width:min(620px,92vw);border-radius:24px;overflow:hidden;transition:transform .25s cubic-bezier(.2,.9,.3,1.2)}
+#launcher.hidden .lx{transform:scale(.95) translateY(-10px)}
+.lx-in{display:flex;align-items:center;gap:12px;padding:16px 20px;font-size:19px}
+.lx-in input{flex:1;font-size:19px;font-weight:500}
+.lx-in input::placeholder{color:var(--fg3)}
+.lx-res{border-top:1px solid var(--line);padding:8px;max-height:46vh;overflow:auto}
+.lx-res:empty{display:none}
+.lx-item{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:14px}
+.lx-item.sel{background:var(--hover)}
+.lx-item .ii{width:34px;height:34px}
+.lx-item .n{flex:1}
+.lx-item .n b{display:block;font-weight:600}
+.lx-item .n small{color:var(--fg3)}
+.kbd{font-size:11px;color:var(--fg3);padding:3px 7px;border-radius:7px;background:var(--well)}
+.lx-sec{font-size:11px;font-weight:700;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;padding:8px 10px 4px}
+
+/* ---------- toasts ---------- */
+#toasts{position:fixed;top:54px;right:14px;z-index:9900;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{width:320px;border-radius:20px;padding:12px 14px;display:flex;gap:12px;align-items:center;animation:tin .4s cubic-bezier(.2,.9,.3,1.2);pointer-events:auto}
+.toast.out{opacity:0;transform:translateX(30px);transition:.35s}
+.toast .ii{width:36px;height:36px;flex-shrink:0}
+.toast b{display:block;font-size:12.5px}
+.toast small{color:var(--fg2)}
+@keyframes tin{from{opacity:0;transform:translateX(40px) scale(.95)}}
+
+/* ---------- shared app UI ---------- */
+.split{display:flex;height:100%}
+.side{width:178px;flex-shrink:0;padding:4px 10px 14px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line);overflow:auto}
+.side-h{font-size:11px;font-weight:700;color:var(--fg3);padding:10px 10px 4px;text-transform:uppercase;letter-spacing:.06em}
+.side-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:10px;text-align:left;font-weight:500;color:var(--fg2);transition:background .15s}
+.side-item:hover{background:var(--hover)}
+.side-item.on{background:var(--hover);color:var(--fg);font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.side-item .badge{margin-left:auto;font-size:11px;padding:1px 7px;border-radius:9px;background:var(--accent);color:#fff;font-weight:700}
+.field{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:12px;background:var(--well);box-shadow:inset 0 1px 2px rgba(0,0,0,.15);color:var(--fg2)}
+.field input{flex:1;color:var(--fg)}
+.field input::placeholder{color:var(--fg3)}
+.pill{height:28px;padding:0 16px;border-radius:14px;font-weight:700;font-size:12px;background:var(--accent);color:#fff;position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 4px 12px color-mix(in srgb,var(--accent) 40%,transparent);transition:transform .15s,filter .15s;flex-shrink:0}
+.pill:hover{filter:brightness(1.1)}
+.pill:active{transform:scale(.96)}
+.pill.ghost{background:var(--hover);color:var(--fg);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.pill.busy{background:var(--well);color:var(--fg2);box-shadow:none;min-width:96px}
+.pill.busy i{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--accent) 55%,transparent);transition:width .1s}
+.pill.busy span{position:relative}
+
+/* store */
+.st-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.st-top{padding:4px 18px 12px}
+.st-content{flex:1;overflow:auto;padding:0 18px 18px}
+.hero{border-radius:20px;padding:22px;display:flex;align-items:center;gap:22px;margin-bottom:18px;position:relative;overflow:hidden;
+  background:linear-gradient(120deg,rgba(255,106,213,.55),rgba(138,92,255,.55) 55%,rgba(90,200,250,.4));box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.hero::after{content:"";position:absolute;right:-60px;top:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.35),transparent 65%)}
+.hero .pk-icon{width:84px;height:84px;font-size:40px;border-radius:24px}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.85)}
+.hero-title{font-size:28px;font-weight:800;letter-spacing:-.5px;color:#fff}
+.hero-desc{color:rgba(255,255,255,.88);margin:4px 0 12px;max-width:380px}
+.st-h{font-size:15px;font-weight:700;margin:4px 2px 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:var(--well);transition:background .15s}
+.card:hover{background:var(--hover)}
+.pk-icon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-weight:800;font-size:22px;color:#fff;flex-shrink:0;position:relative;overflow:hidden;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.6),0 4px 10px rgba(0,0,0,.2)}
+.pk-icon::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.45),transparent 55%);opacity:.6}
+.pk-meta{flex:1;min-width:0}
+.pk-name{font-weight:700}
+.pk-desc{color:var(--fg2);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pk-sub{color:var(--fg3);font-size:11px;margin-top:2px;font-family:var(--mono)}
+.empty{color:var(--fg3);padding:30px;text-align:center;grid-column:1/-1}
+
+/* terminal */
+.term{height:100%;overflow:auto;padding:4px 16px 14px;font-family:var(--mono);font-size:12.5px;line-height:1.55;user-select:text;cursor:text;background:rgba(0,0,0,.22)}
+body.light .term{background:rgba(255,255,255,.25)}
+.ln{white-space:pre-wrap;word-break:break-word}
+.inl{display:flex;gap:8px;align-items:baseline}
+.inl input{flex:1;font-family:var(--mono);font-size:12.5px;caret-color:var(--accent)}
+.c-acc{color:var(--accent);font-weight:600}
+.c-2{color:#c792ea}
+.c-dim{color:var(--fg3)}
+.c-ok{color:#3ee08f}
+.c-err{color:#ff6b7a}
+.c-warn{color:#ffcb6b}
+body.light .c-2{color:#7a3fc4}
+body.light .c-ok{color:#0f9a55}
+.fetch{display:flex;gap:22px;margin:6px 0 4px}
+.fetch pre{font-family:var(--mono);color:var(--accent);line-height:1.25}
+.swatch{display:inline-block;width:18px;height:12px;border-radius:3px;margin-right:4px}
+
+/* files */
+.crumbs{display:flex;align-items:center;gap:6px;padding:4px 18px 10px;color:var(--fg2);font-weight:500}
+.crumbs b{color:var(--fg)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;padding:4px 14px 18px;overflow:auto}
+.fitem{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:14px;text-align:center;font-size:12px;font-weight:500}
+.fitem:hover{background:var(--hover)}
+.fitem.sel{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+.folder{width:58px;height:46px;position:relative}
+.folder::before{content:"";position:absolute;left:0;top:0;width:24px;height:10px;border-radius:5px 5px 0 0;background:color-mix(in srgb,var(--accent) 80%,#000)}
+.folder::after{content:"";position:absolute;left:0;right:0;top:6px;bottom:0;border-radius:6px 9px 9px 9px;background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 85%,#fff),var(--accent));box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 4px 10px rgba(0,0,0,.2)}
+.doc{width:42px;height:52px;border-radius:7px;background:linear-gradient(#fff,#e7ecf7);box-shadow:0 3px 8px rgba(0,0,0,.2);display:grid;place-items:end center;padding-bottom:7px;font-size:9px;font-weight:800;color:#5a6b8c;font-family:var(--mono)}
+
+/* settings */
+.set-main{flex:1;overflow:auto;padding:4px 22px 22px}
+.set-sec{margin-bottom:18px}
+.set-sec h4{font-size:15px;font-weight:700;margin:4px 0 10px}
+.set-card{border-radius:16px;background:var(--well);padding:4px 14px}
+.set-row{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+.set-row:last-child{border-bottom:0}
+.set-row .lbl{flex:1}
+.set-row .lbl b{display:block;font-weight:600}
+.set-row .lbl small{color:var(--fg3)}
+.set-row input[type=range]{max-width:200px}
+.seg{display:flex;padding:3px;border-radius:12px;background:var(--well)}
+.seg button{padding:5px 14px;border-radius:9px;font-weight:600;color:var(--fg2)}
+.seg button.on{background:rgba(255,255,255,.9);color:#0d1426;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.swatches{display:flex;gap:8px}
+.sw{width:22px;height:22px;border-radius:50%;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 2px 5px rgba(0,0,0,.25);transition:transform .15s}
+.sw.on{outline:2px solid var(--fg);outline-offset:2px}
+.sw:hover{transform:scale(1.12)}
+.toggle{width:44px;height:26px;border-radius:13px;background:var(--hover);position:relative;transition:background .2s;flex-shrink:0;box-shadow:inset 0 1px 2px rgba(0,0,0,.2)}
+.toggle::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.3);transition:transform .22s cubic-bezier(.2,.9,.3,1.3)}
+.toggle.on{background:#3ee08f}
+.toggle.on::after{transform:translateX(18px)}
+.wps{display:flex;gap:10px;padding:12px 0}
+.wp{width:110px;height:68px;border-radius:12px;position:relative;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+.wp.on{outline:2px solid var(--fg);outline-offset:2px}
+.wp span{position:absolute;left:8px;bottom:6px;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:6px 12px;padding:12px 0;font-size:12.5px}
+.kv dt{color:var(--fg3)}
+.kv dd{font-weight:500}
+
+/* web + music */
+.urlbar{display:flex;gap:8px;align-items:center;padding:2px 14px 10px}
+.urlbar .field{flex:1;justify-content:center}
+.start{display:flex;flex-direction:column;align-items:center;padding:40px 20px;gap:18px}
+.start h2{font-size:34px;font-weight:800;letter-spacing:-1px}
+.start .field{width:min(460px,90%);height:42px;border-radius:21px}
+.tiles{display:grid;grid-template-columns:repeat(4,64px);gap:16px;margin-top:6px}
+.tiles div{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--fg2)}
+.tiles i{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:20px;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 4px 10px rgba(0,0,0,.2)}
+.music{display:flex;flex-direction:column;align-items:center;padding:18px 26px 22px;gap:14px;height:100%}
+.music .cover{width:190px;height:190px;border-radius:22px;background:conic-gradient(from 200deg,var(--c1),var(--c2),var(--c3),var(--c4),var(--c1));box-shadow:0 18px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.5);animation:spin 30s linear infinite paused}
+.music.playing .cover{animation-play-state:running}
+@keyframes spin{to{filter:hue-rotate(360deg)}}
+.music h3{font-size:18px;font-weight:700}
+.music small{color:var(--fg2)}
+.prog{width:100%;height:6px;border-radius:3px;background:var(--hover);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--fg);border-radius:3px;width:0}
+.mctrl{display:flex;gap:18px;align-items:center}
+.mctrl button{width:42px;height:42px;border-radius:50%;display:grid;place-items:center}
+.mctrl button:hover{background:var(--hover)}
+.mctrl .play{width:56px;height:56px;background:var(--hover);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.times{width:100%;display:flex;justify-content:space-between;font-size:11px;color:var(--fg3);font-variant-numeric:tabular-nums;margin-top:-8px}
+
+.badge-concept{position:fixed;left:16px;bottom:16px;z-index:9000;font-size:11px;font-weight:600;color:var(--fg2);padding:6px 12px;border-radius:12px}
+@media (max-width:900px){.badge-concept,#w-clock{display:none}}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);border-radius:5px;border:3px solid transparent;background-clip:padding-box}
+body.light ::-webkit-scrollbar-thumb{background-color:rgba(13,20,38,.2)}
+</style>
+</head>
+<body class="refract">
+
+<!-- refraction filter used by .lens surfaces (Chromium) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="lg" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.006 0.014" numOctaves="2" seed="11" result="noise"/>
+    <feGaussianBlur in="noise" stdDeviation="3" result="soft"/>
+    <feDisplacementMap in="SourceGraphic" in2="soft" scale="46" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div id="wall">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
+  <svg id="ribbons" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="rg1" x1="0" x2="1"><stop offset="0" style="stop-color:var(--c1)"/><stop offset="1" style="stop-color:var(--c2)"/></linearGradient>
+      <linearGradient id="rg2" x1="0" x2="1"><stop offset="0" style="stop-color:var(--c3)"/><stop offset="1" style="stop-color:var(--c4)"/></linearGradient>
+    </defs>
+    <path d="M-100 720 C 300 520, 600 980, 1000 700 S 1500 420, 1750 600" fill="none" stroke="url(#rg1)" stroke-width="70" stroke-linecap="round" opacity=".7"/>
+    <path d="M-100 820 C 360 640, 640 1040, 1060 800 S 1520 560, 1750 720" fill="none" stroke="url(#rg2)" stroke-width="26" stroke-linecap="round" opacity=".6"/>
+    <path d="M-80 260 C 260 120, 520 420, 880 260 S 1380 60, 1700 200" fill="none" stroke="url(#rg2)" stroke-width="14" stroke-linecap="round" opacity=".45"/>
+    <circle cx="1240" cy="330" r="190" fill="none" stroke="url(#rg1)" stroke-width="6" opacity=".5"/>
+    <circle cx="300" cy="420" r="90" fill="none" stroke="url(#rg2)" stroke-width="4" opacity=".4"/>
+  </svg>
+</div>
+
+<header id="topbar" class="glass lens">
+  <div class="tb-side">
+    <button class="tb-btn" id="tb-logo" title="Glacier menu"><span class="logo" id="logo-ic"></span></button>
+    <button class="tb-btn" id="tb-app">Desktop</button>
+    <button class="tb-btn tb-menu">File</button><button class="tb-btn tb-menu">Edit</button>
+    <button class="tb-btn tb-menu">View</button><button class="tb-btn tb-menu">Window</button><button class="tb-btn tb-menu">Help</button>
+  </div>
+  <button class="tb-btn" id="tb-clock"></button>
+  <div class="tb-side tb-right">
+    <button class="tb-btn tb-hide-s" id="tb-floe" title="floe status"></button>
+    <button class="tb-btn tb-hide-s" id="tb-net"></button>
+    <button class="tb-btn tb-hide-s" id="tb-vol"></button>
+    <button class="tb-btn" id="tb-bat"></button>
+    <button class="tb-btn" id="tb-search" title="Search (Alt+Space)"></button>
+    <button class="tb-btn" id="tb-cc" title="Control Center"></button>
+  </div>
+</header>
+
+<main id="desktop">
+  <div class="widget glass lens" id="w-clock">
+    <div class="t" id="wc-t">--:--</div>
+    <div class="d" id="wc-d"></div>
+    <div class="s"><span class="ok-dot"></span><span id="wc-s">System up to date</span></div>
+  </div>
+</main>
+
+<nav id="dock" class="glass lens"></nav>
+
+<div id="cc" class="glass strong hidden"></div>
+<div id="launcher" class="hidden"><div class="lx glass strong"><div class="lx-in"><span id="lx-ic"></span><input id="lx-q" placeholder="Search apps, packages…" autocomplete="off" spellcheck="false"></div><div class="lx-res" id="lx-res"></div></div></div>
+<div id="toasts"></div>
+<div class="badge-concept glass">Glacier OS · UI concept · Frost shell</div>
+<div id="dim"></div>
+
+<script>
+"use strict";
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------------- icons ---------------- */
+const I={
+  files:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  web:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>',
+  shell:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9l3 3-3 3M12 15h5"/>',
+  store:'<path d="M4 7.5l8-4 8 4v9l-8 4-8-4z"/><path d="M4 7.5l8 4 8-4M12 11.5v9"/>',
+  settings:'<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+  music:'<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  grid:'<rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/>',
+  peak:'<path d="M2.5 19L9 7.5l3.2 5L15 8.5 21.5 19z"/><path d="M7.2 10.7l1.8 1.3 1.4-1.6"/>',
+  wifi:'<path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/>',
+  battery:'<rect x="2" y="7" width="18" height="10" rx="3"/><path d="M22 11v2"/><rect x="4.5" y="9.5" width="11" height="5" rx="1.2" fill="currentColor" stroke="none"/>',
+  volume:'<path d="M4 10v4h4l5 4V6L8 10z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  bt:'<path d="M7 7l10 10-5 4V3l5 4L7 17"/>',
+  moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',
+  cc:'<rect x="3" y="5" width="18" height="6" rx="3"/><circle cx="16" cy="8" r="1.5"/><rect x="3" y="13" width="18" height="6" rx="3"/><circle cx="8" cy="16" r="1.5"/>',
+  focus:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+  close:'<path d="M7 7l10 10M17 7L7 17"/>',
+  min:'<path d="M6 12h12"/>',
+  max:'<rect x="6" y="6" width="12" height="12" rx="3"/>',
+  play:'<path d="M8 5v14l11-7z" fill="currentColor"/>',
+  pause:'<path d="M8 5v14M16 5v14" stroke-width="3"/>',
+  prev:'<path d="M18 6v12l-8-6zM6 6v12" fill="currentColor"/>',
+  next:'<path d="M6 6v12l8-6zM18 6v12" fill="currentColor"/>',
+  home:'<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/>',
+  down:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+  image:'<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4 4 3 3-2 4 3"/>',
+  doc:'<path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/>',
+  chev:'<path d="M9 6l6 6-6 6"/>',
+  back:'<path d="M15 6l-6 6 6 6"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  reload:'<path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/>',
+};
+const svg=(n,s=16,sw=1.9)=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
+const appIcon=(id)=>{const a=APPS[id];return `<div class="app-icon" style="background:linear-gradient(145deg,${a.g[0]},${a.g[1]})">${svg(a.icon,24,2)}</div>`;};
+
+/* ---------------- package repo (mock data) ---------------- */
+const REPO=[
+  {id:'firefox',name:'Firefox',ver:'133.0',size:82,cat:'Internet',desc:'Fast, private, open web browser.',g:['#ff9a3c','#e5367a'],deps:['nss','gtk4']},
+  {id:'thunderbird',name:'Thunderbird',ver:'128.5',size:74,cat:'Internet',desc:'Email, calendar and chat in one place.',g:['#4aa3ff','#2a4bd7'],deps:['nss','gtk4']},
+  {id:'krita',name:'Krita',ver:'5.2.6',size:118,cat:'Graphics',desc:'Professional painting and illustration.',g:['#ff6ad5','#8a5cff'],deps:['qt6-base']},
+  {id:'gimp',name:'GIMP',ver:'3.0.0',size:96,cat:'Graphics',desc:'Photo retouching and image editing.',g:['#9c8a6e','#5b4d3a'],deps:['gtk3','babl','gegl']},
+  {id:'inkscape',name:'Inkscape',ver:'1.4',size:88,cat:'Graphics',desc:'Vector graphics editor.',g:['#3d3d3d','#111'],deps:['gtk3']},
+  {id:'blender',name:'Blender',ver:'4.3',size:310,cat:'Graphics',desc:'3D modeling, animation and rendering.',g:['#ff9e3d','#2b5fb5'],deps:['python','openimageio']},
+  {id:'vlc',name:'VLC',ver:'3.0.21',size:41,cat:'Media',desc:'Plays pretty much every media format.',g:['#ffa53a','#ff6a00'],deps:['ffmpeg','qt6-base']},
+  {id:'obs-studio',name:'OBS Studio',ver:'30.2',size:126,cat:'Media',desc:'Screen recording and live streaming.',g:['#4a4a5a','#1b1b26'],deps:['ffmpeg','qt6-base','pipewire']},
+  {id:'audacity',name:'Audacity',ver:'3.7',size:38,cat:'Media',desc:'Multi-track audio editor and recorder.',g:['#2f6cf0','#f0a030'],deps:['gtk3','pipewire']},
+  {id:'code-oss',name:'Code – OSS',ver:'1.95',size:142,cat:'Develop',desc:'Open-source code editor.',g:['#3aa3f5','#1b62c4'],deps:['electron']},
+  {id:'neovim',name:'Neovim',ver:'0.10.2',size:12,cat:'Develop',desc:'Hyperextensible Vim-based editor.',g:['#7ed957','#2f8f5b'],deps:['luajit']},
+  {id:'git',name:'Git',ver:'2.47',size:18,cat:'Develop',desc:'Distributed version control.',g:['#f6643a','#c2361b'],deps:['openssl','curl']},
+  {id:'htop',name:'htop',ver:'3.3',size:1,cat:'System',desc:'Interactive process viewer.',g:['#4fd18b','#1d7a4b'],deps:['ncurses']},
+  {id:'btop',name:'btop',ver:'1.4',size:2,cat:'System',desc:'Beautiful resource monitor.',g:['#5ac8fa','#3a5cff'],deps:[]},
+  {id:'libreoffice',name:'LibreOffice',ver:'24.8',size:268,cat:'Office',desc:'Documents, spreadsheets, presentations.',g:['#33c481','#18a2c4'],deps:['java-runtime']},
+  {id:'supertuxkart',name:'SuperTuxKart',ver:'1.4',size:640,cat:'Games',desc:'Open-source kart racer.',g:['#ffcf3a','#ff6a3a'],deps:['openal']},
+];
+const installed=new Set(['git','neovim','htop','firefox']);
+const installing=new Set(), progress={};
+let generation=42;
+const txlog=[
+  {gen:41,action:'install',ids:['git','neovim'],t:new Date(Date.now()-86400e3*3)},
+  {gen:42,action:'install',ids:['firefox','htop'],t:new Date(Date.now()-86400e3)},
+];
+const pkg=id=>REPO.find(p=>p.id===id);
+const fmtSize=mb=>mb>=1000?(mb/1000).toFixed(1)+' GB':mb+' MB';
+
+function commit(action,ids,label){
+  ids.forEach(id=>action==='install'?installed.add(id):installed.delete(id));
+  generation++;
+  txlog.push({gen:generation,action,ids,t:new Date(),label});
+  refreshAll();
+}
+function refreshAll(){
+  Object.values(wins).forEach(w=>w.refresh&&w.refresh());
+  $('#tb-floe').innerHTML=svg('store',15)+`<span>${installed.size}</span>`;
+  $('#wc-s').textContent=installing.size?`floe: installing ${installing.size}…`:`Generation ${generation} · up to date`;
+}
+async function storeInstall(id){
+  if(installing.has(id)||installed.has(id)) return;
+  installing.add(id); progress[id]=0; refreshAll();
+  for(let i=1;i<=25;i++){
+    await sleep(40+Math.random()*70);
+    progress[id]=i*4;
+    $$(`[data-id="${id}"] .busy i`).forEach(b=>b.style.width=progress[id]+'%');
+  }
+  installing.delete(id); commit('install',[id]);
+  notify(pkg(id).name+' installed',`floe · generation ${generation}`,null,pkg(id));
+}
+function storeRemove(id){
+  if(!installed.has(id)) return;
+  commit('remove',[id]);
+  notify(pkg(id).name+' removed',`floe · generation ${generation} (rollback available)`,null,pkg(id));
+}
+
+/* ---------------- apps ---------------- */
+const APPS={
+  files:{name:'Files',icon:'files',g:['#5fb6ff','#2b6cff'],w:740,h:470,render:renderFiles},
+  web:{name:'Web',icon:'web',g:['#36d1dc','#5b86e5'],w:820,h:540,render:renderWeb},
+  shell:{name:'Shell',icon:'shell',g:['#4a5070','#151a2b'],w:640,h:400,render:renderShell},
+  store:{name:'Floe Store',icon:'store',g:['#b28cff','#5a4bff'],w:900,h:580,render:renderStore},
+  music:{name:'Music',icon:'music',g:['#ff6a88','#ff9a8b'],w:360,h:520,render:renderMusic},
+  settings:{name:'Settings',icon:'settings',g:['#9aa9ba','#566577'],w:760,h:560,render:renderSettings},
+};
+const DOCK=['launcher','files','web','shell','store','music','settings','|','trash'];
+const DOCK_META={launcher:{name:'Launcher',icon:'grid',g:['#7f8cff','#c06bff']},trash:{name:'Trash',icon:'trash',g:['#c9d3e0','#8794a6']}};
+
+/* ---------------- window manager ---------------- */
+let z=100, active=null; const wins={}; let openCount=0;
+function openApp(id,opts={}){
+  const a=APPS[id]; if(!a) return;
+  if(wins[id]){ wins[id].el.classList.remove('hidden'); focus(id); return wins[id]; }
+  const iw=innerWidth, ih=innerHeight;
+  const w=Math.min(opts.w||a.w,iw-40), h=Math.min(opts.h||a.h,ih-160);
+  const x=opts.x ?? Math.max(10,Math.min(iw-w-10,90+(openCount%6)*36));
+  const y=opts.y ?? Math.max(52,Math.min(ih-h-100,70+(openCount%6)*30));
+  openCount++;
+  const el=document.createElement('section');
+  el.className='win glass strong opening';
+  el.style.cssText=`width:${w}px;height:${h}px;left:${x}px;top:${y}px`;
+  el.innerHTML=`<div class="titlebar"><div class="ti">${appIcon(id)}</div><div class="title">${a.name}</div>
+    <div class="ctrls"><button class="ctrl min" title="Minimize">${svg('min',13,2.2)}</button><button class="ctrl max" title="Maximize">${svg('max',11,2.2)}</button><button class="ctrl close" title="Close">${svg('close',12,2.2)}</button></div></div>
+    <div class="wbody"></div><div class="resize"></div>`;
+  $('#desktop').append(el);
+  const rec={el}; wins[id]=rec;
+  a.render($('.wbody',el),rec);
+  wireWindow(id,el);
+  void el.offsetWidth; setTimeout(()=>el.classList.remove('opening'),20);
+  focus(id); updateDock();
+  const di=$(`.dock-item[data-id="${id}"]`); if(di){di.classList.remove('bounce');void di.offsetWidth;di.classList.add('bounce');}
+  return rec;
+}
+function wireWindow(id,el){
+  const tb=$('.titlebar',el);
+  el.addEventListener('pointerdown',()=>focus(id),true);
+  tb.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.ctrl')||el.classList.contains('max')) return;
+    const sx=e.clientX,sy=e.clientY,ox=el.offsetLeft,oy=el.offsetTop;
+    tb.setPointerCapture(e.pointerId);
+    const mv=ev=>{el.style.left=Math.min(innerWidth-80,Math.max(80-el.offsetWidth,ox+ev.clientX-sx))+'px';el.style.top=Math.min(innerHeight-120,Math.max(48,oy+ev.clientY-sy))+'px'};
+    const up=()=>{tb.removeEventListener('pointermove',mv);tb.removeEventListener('pointerup',up);tb.removeEventListener('pointercancel',up)};
+    tb.addEventListener('pointermove',mv);tb.addEventListener('pointerup',up);tb.addEventListener('pointercancel',up);
+  });
+  tb.addEventListener('dblclick',e=>{if(!e.target.closest('.ctrl'))toggleMax(el)});
+  $('.close',el).onclick=()=>closeApp(id);
+  $('.min',el).onclick=()=>minimize(id);
+  $('.max',el).onclick=()=>toggleMax(el);
+  const rz=$('.resize',el);
+  rz.addEventListener('pointerdown',e=>{
+    e.stopPropagation(); if(el.classList.contains('max')) return;
+    const sx=e.clientX,sy=e.clientY,sw=el.offsetWidth,sh=el.offsetHeight;
+    rz.setPointerCapture(e.pointerId);
+    const mv=ev=>{el.style.width=Math.max(340,sw+ev.clientX-sx)+'px';el.style.height=Math.max(220,sh+ev.clientY-sy)+'px'};
+    const up=()=>{rz.removeEventListener('pointermove',mv);rz.removeEventListener('pointerup',up)};
+    rz.addEventListener('pointermove',mv);rz.addEventListener('pointerup',up);
+  });
+}
+function toggleMax(el){el.classList.add('anim');el.classList.toggle('max');setTimeout(()=>el.classList.remove('anim'),320)}
+function focus(id){
+  const w=wins[id]; if(!w) return;
+  w.el.style.zIndex=++z; active=id;
+  $$('.win').forEach(e=>e.classList.toggle('focused',e===w.el));
+  $('#tb-app').textContent=APPS[id].name;
+  w.onFocus&&w.onFocus();
+}
+function refocusTop(){
+  let best=null,bz=-1;
+  for(const [id,w] of Object.entries(wins)){ if(w.el.classList.contains('hidden')) continue; const zz=+w.el.style.zIndex; if(zz>bz){bz=zz;best=id} }
+  if(best) focus(best); else { active=null; $('#tb-app').textContent='Desktop'; $$('.win').forEach(e=>e.classList.remove('focused')); }
+}
+function minimize(id){ const w=wins[id]; if(!w) return; w.el.classList.add('hidden'); refocusTop(); }
+function closeApp(id){
+  const w=wins[id]; if(!w) return;
+  w.dispose&&w.dispose();
+  delete wins[id]; w.el.classList.add('closing'); setTimeout(()=>w.el.remove(),240);
+  refocusTop(); updateDock();
+}
+
+/* ---------------- dock ---------------- */
+function buildDock(){
+  const d=$('#dock');
+  d.innerHTML=DOCK.map(id=>{
+    if(id==='|') return '<div class="dock-sep"></div>';
+    const m=APPS[id]||DOCK_META[id];
+    return `<div class="dock-item" data-id="${id}"><div class="tip glass strong">${m.name}</div><div class="app-icon" style="background:linear-gradient(145deg,${m.g[0]},${m.g[1]})">${svg(m.icon,24,2)}</div><div class="dot"></div></div>`;
+  }).join('');
+  $$('.dock-item',d).forEach(it=>it.onclick=()=>dockClick(it.dataset.id));
+  d.addEventListener('mousemove',e=>{
+    $$('.dock-item',d).forEach(it=>{
+      const r=it.getBoundingClientRect(); const c=r.left+r.width/2;
+      const k=Math.max(0,1-Math.abs(e.clientX-c)/170);
+      it.style.setProperty('--s',(54+26*k*k)+'px');
+    });
+  });
+  d.addEventListener('mouseleave',()=>$$('.dock-item',d).forEach(it=>it.style.removeProperty('--s')));
+}
+function updateDock(){ $$('.dock-item').forEach(it=>it.classList.toggle('running',!!wins[it.dataset.id])); }
+function dockClick(id){
+  if(id==='launcher') return toggleLauncher();
+  if(id==='trash') return notify('Trash','Trash is empty.','trash');
+  const w=wins[id];
+  if(w && !w.el.classList.contains('hidden') && active===id) return minimize(id);
+  openApp(id);
+}
+
+/* ---------------- top bar ---------------- */
+function tick(){
+  const d=new Date();
+  const t=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  $('#tb-clock').textContent=d.toLocaleDateString([], {weekday:'short',day:'numeric',month:'short'})+'  '+t;
+  $('#wc-t').textContent=t;
+  $('#wc-d').textContent=d.toLocaleDateString([], {weekday:'long',day:'numeric',month:'long'});
+}
+function buildTopbar(){
+  $('#logo-ic').innerHTML=svg('peak',13,2.2);
+  $('#tb-net').innerHTML=svg('wifi',16);
+  $('#tb-vol').innerHTML=svg('volume',16);
+  $('#tb-bat').innerHTML=svg('battery',19,1.7)+'<span>86%</span>';
+  $('#tb-search').innerHTML=svg('search',16);
+  $('#tb-cc').innerHTML=svg('cc',16);
+  $('#lx-ic').innerHTML=svg('search',20);
+  $('#tb-logo').onclick=toggleLauncher;
+  $('#tb-search').onclick=toggleLauncher;
+  $('#tb-floe').onclick=()=>openApp('store');
+  [$('#tb-cc'),$('#tb-net'),$('#tb-vol'),$('#tb-bat')].forEach(b=>b.onclick=e=>{e.stopPropagation();toggleCC()});
+  $('#tb-clock').onclick=()=>notify('Calendar','No events today. Enjoy the quiet.','sun');
+  tick(); setInterval(tick,1000);
+}
+
+/* ---------------- control center ---------------- */
+const cc={wifi:true,bt:true,focus:false};let ccBri=100;
+function buildCC(){
+  const el=$('#cc');
+  const tile=(k,ic,name,sub,on)=>`<button class="tile${on?' on':''}" data-k="${k}"><span class="ic">${svg(ic,16)}</span><span><b>${name}</b><small>${sub}</small></span></button>`;
+  el.innerHTML=
+    tile('wifi','wifi','Wi-Fi',cc.wifi?'Home-5G':'Off',cc.wifi)+
+    tile('bt','bt','Bluetooth',cc.bt?'On':'Off',cc.bt)+
+    tile('focus','focus','Focus',cc.focus?'On':'Off',cc.focus)+
+    tile('dark',isLight()?'sun':'moon','Appearance',isLight()?'Light':'Dark',!isLight())+
+    `<div class="slider-row wide"><label>Display</label><div class="sl">${svg('sun',15)}<input type="range" id="cc-bri" min="30" max="100" value="${ccBri}"></div></div>
+     <div class="slider-row wide"><label>Sound</label><div class="sl">${svg('volume',15)}<input type="range" id="cc-vol" min="0" max="100" value="64"></div></div>
+     <div class="slider-row wide np"><div class="art"></div><div class="meta"><b>Glass Tides</b><small>Aurora Field</small></div><button class="tb-btn" id="cc-play">${svg(musicPlaying?'pause':'play',16)}</button></div>`;
+  $$('.tile',el).forEach(t=>t.onclick=()=>{
+    const k=t.dataset.k;
+    if(k==='dark') setTheme(isLight()?'dark':'light');
+    else { cc[k]=!cc[k]; if(k==='focus'&&cc.focus) notify('Focus on','Notifications are silenced.','focus'); }
+    buildCC();
+  });
+  $$('input[type=range]',el).forEach(paintRange);
+  $('#cc-bri').oninput=e=>{paintRange(e.target);ccBri=+e.target.value;$('#dim').style.opacity=(100-ccBri)/100*.75};
+  $('#cc-vol').oninput=e=>paintRange(e.target);
+  $('#cc-play').onclick=()=>{toggleMusic();buildCC()};
+}
+function toggleCC(force){
+  const el=$('#cc'); const show=force??el.classList.contains('hidden');
+  if(show){buildCC();el.classList.remove('hidden');$('#tb-cc').classList.add('on')} else {el.classList.add('hidden');$('#tb-cc').classList.remove('on')}
+}
+function paintRange(r){const p=(r.value-r.min)/(r.max-r.min)*100;r.style.setProperty('--p',p+'%')}
+
+/* ---------------- launcher ---------------- */
+let lxSel=0,lxItems=[];
+function toggleLauncher(force){
+  const l=$('#launcher'); const show=force??l.classList.contains('hidden');
+  if(show){ toggleCC(false); l.classList.remove('hidden'); $('#lx-q').value=''; drawLauncher(); setTimeout(()=>$('#lx-q').focus(),30); }
+  else l.classList.add('hidden');
+}
+function drawLauncher(){
+  const q=$('#lx-q').value.trim().toLowerCase();
+  const apps=Object.keys(APPS).filter(id=>!q||APPS[id].name.toLowerCase().includes(q)).map(id=>({type:'app',id}));
+  const pk=q?REPO.filter(p=>p.name.toLowerCase().includes(q)||p.id.includes(q)).slice(0,6).map(p=>({type:'pkg',id:p.id})):[];
+  lxItems=[...apps,...pk]; lxSel=Math.min(lxSel,Math.max(0,lxItems.length-1));
+  let html='',i=0;
+  if(apps.length){html+='<div class="lx-sec">Apps</div>';apps.forEach(a=>{html+=`<div class="lx-item${i===lxSel?' sel':''}" data-i="${i}"><div class="ii">${appIcon(a.id)}</div><div class="n"><b>${APPS[a.id].name}</b><small>Application</small></div>${i===lxSel?'<span class="kbd">↵ Open</span>':''}</div>`;i++;});}
+  if(pk.length){html+='<div class="lx-sec">floe packages</div>';pk.forEach(o=>{const p=pkg(o.id);const ins=installed.has(p.id);html+=`<div class="lx-item${i===lxSel?' sel':''}" data-i="${i}"><div class="ii pk-icon" style="width:34px;height:34px;font-size:16px;border-radius:10px;background:linear-gradient(135deg,${p.g[0]},${p.g[1]})">${p.name[0]}</div><div class="n"><b>${p.name}</b><small>${ins?'Installed':'floe install '+p.id} · ${fmtSize(p.size)}</small></div>${i===lxSel?`<span class="kbd">↵ ${ins?'View':'Install'}</span>`:''}</div>`;i++;});}
+  if(!lxItems.length) html=`<div class="lx-sec">No results for “${esc(q)}”</div>`;
+  $('#lx-res').innerHTML=html;
+  $$('.lx-item').forEach(el=>{el.onmouseenter=()=>{lxSel=+el.dataset.i;drawLauncher()};el.onclick=()=>{lxSel=+el.dataset.i;lxRun()}});
+}
+function lxRun(){
+  const it=lxItems[lxSel]; if(!it) return; toggleLauncher(false);
+  if(it.type==='app') openApp(it.id);
+  else { const st=openApp('store'); st.setQuery&&st.setQuery(pkg(it.id).name); if(!installed.has(it.id)) storeInstall(it.id); }
+}
+
+/* ---------------- notifications ---------------- */
+function notify(title,msg,icon,p){
+  const t=document.createElement('div'); t.className='toast glass strong';
+  const ic=p?`<div class="ii pk-icon" style="width:36px;height:36px;font-size:17px;border-radius:11px;background:linear-gradient(135deg,${p.g[0]},${p.g[1]})">${p.name[0]}</div>`
+            :`<div class="ii"><div class="app-icon" style="background:linear-gradient(145deg,#7f8cff,#c06bff)">${svg(icon||'peak',20,2)}</div></div>`;
+  t.innerHTML=ic+`<div><b>${esc(title)}</b><small>${esc(msg)}</small></div>`;
+  $('#toasts').append(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),400)},cc.focus?1200:4200);
+}
+
+/* ---------------- theme ---------------- */
+const isLight=()=>document.body.classList.contains('light');
+function setTheme(m){document.body.classList.toggle('light',m==='light');refreshAll()}
+
+/* ================= APP: Floe Store ================= */
+function renderStore(body,rec){
+  const cats=['Discover','Installed','Internet','Graphics','Media','Develop','Office','System','Games'];
+  body.innerHTML=`<div class="split"><aside class="side"><div class="side-h">floe</div>${cats.map(c=>`<button class="side-item${c==='Discover'?' on':''}" data-cat="${c}">${c}${c==='Installed'?'<span class="badge"></span>':''}</button>`).join('')}</aside>
+    <div class="st-main"><div class="st-top"><div class="field">${svg('search',14)}<input placeholder="Search floe packages" spellcheck="false"></div></div><div class="st-content"></div></div></div>`;
+  let cat='Discover',q='';
+  const content=$('.st-content',body), inp=$('input',body);
+  const btn=p=>installing.has(p.id)?`<button class="pill busy"><i style="width:${progress[p.id]||0}%"></i><span>Installing</span></button>`
+              :installed.has(p.id)?`<button class="pill ghost" data-act="remove">Remove</button>`:`<button class="pill" data-act="install">Get</button>`;
+  const card=p=>`<div class="card" data-id="${p.id}"><div class="pk-icon" style="background:linear-gradient(135deg,${p.g[0]},${p.g[1]})">${p.name[0]}</div><div class="pk-meta"><div class="pk-name">${p.name}</div><div class="pk-desc">${p.desc}</div><div class="pk-sub">${p.id} ${p.ver} · ${fmtSize(p.size)}</div></div>${btn(p)}</div>`;
+  function draw(){
+    $('.badge',body).textContent=installed.size;
+    const ql=q.toLowerCase();
+    let list=REPO.filter(p=>q?(p.name.toLowerCase().includes(ql)||p.id.includes(ql)||p.desc.toLowerCase().includes(ql))
+      :cat==='Discover'?true:cat==='Installed'?installed.has(p.id):p.cat===cat);
+    const f=pkg('krita');
+    const hero=(cat==='Discover'&&!q)?`<div class="hero" data-id="krita"><div class="pk-icon" style="background:linear-gradient(135deg,${f.g[0]},${f.g[1]})">K</div><div style="position:relative;z-index:1"><div class="eyebrow">Editor's pick</div><div class="hero-title">${f.name}</div><div class="hero-desc">${f.desc} Sandboxed, signed and installed atomically — roll back any time.</div>${btn(f)}</div></div>`:'';
+    content.innerHTML=hero+`<div class="st-h">${q?`Results for “${esc(q)}”`:cat==='Discover'?'Popular on floe':cat}</div><div class="grid">${list.map(card).join('')||'<div class="empty">No packages here yet.</div>'}</div>`;
+  }
+  content.onclick=e=>{
+    const b=e.target.closest('[data-act]'); if(!b) return;
+    const id=b.closest('[data-id]').dataset.id;
+    b.dataset.act==='install'?storeInstall(id):storeRemove(id);
+  };
+  $$('.side-item',body).forEach(s=>s.onclick=()=>{cat=s.dataset.cat;q='';inp.value='';$$('.side-item',body).forEach(x=>x.classList.toggle('on',x===s));draw()});
+  inp.oninput=()=>{q=inp.value.trim();draw()};
+  rec.refresh=draw;
+  rec.setQuery=s=>{inp.value=s;q=s;draw()};
+  draw();
+}
+
+/* ================= APP: Shell (floe CLI) ================= */
+function renderShell(body,rec){
+  body.innerHTML=`<div class="term"><div class="out"></div><div class="inl"><span class="ps1"></span><input spellcheck="false" autocomplete="off" aria-label="terminal input"></div></div>`;
+  const term=$('.term',body), out=$('.out',body), inp=$('input',body);
+  const PS1=`<span class="c-acc">you</span><span class="c-dim">@</span><span class="c-2">glacier</span> <span class="c-dim">~</span> <span class="c-acc">❯</span>`;
+  $('.ps1',body).innerHTML=PS1;
+  const print=(html='',cls='')=>{const d=document.createElement('div');d.className='ln '+cls;d.innerHTML=html;out.append(d);term.scrollTop=term.scrollHeight;return d};
+  const hist=[];let hi=0,busy=false,alive=true;
+  rec.dispose=()=>{alive=false};
+  rec.onFocus=()=>setTimeout(()=>inp.focus(),0);
+  term.addEventListener('mouseup',()=>{if(!getSelection().toString()) inp.focus()});
+  inp.addEventListener('keydown',async e=>{
+    if(e.key==='ArrowUp'){if(hi>0){hi--;inp.value=hist[hi]}e.preventDefault();return}
+    if(e.key==='ArrowDown'){if(hi<hist.length){hi++;inp.value=hist[hi]||''}e.preventDefault();return}
+    if(e.key==='l'&&e.ctrlKey){out.innerHTML='';e.preventDefault();return}
+    if(e.key!=='Enter'||busy) return;
+    const cmd=inp.value; inp.value='';
+    print(PS1+' '+esc(cmd));
+    if(cmd.trim()){hist.push(cmd);} hi=hist.length;
+    busy=true; inp.parentElement.style.visibility='hidden';
+    try{ await run(cmd); }catch(err){ print('error: '+esc(err.message),'c-err'); }
+    busy=false; if(!alive) return;
+    inp.parentElement.style.visibility=''; inp.focus(); term.scrollTop=term.scrollHeight;
+  });
+
+  const bar=(i,n=24)=>'█'.repeat(i)+'░'.repeat(n-i);
+  async function run(line){
+    const [c,...args]=line.trim().split(/\s+/);
+    switch(c){
+      case undefined: case '': return;
+      case 'help': return print(
+`<span class="c-acc">Glacier shell</span> — try these:
+  <span class="c-2">floe help</span>            package manager commands
+  <span class="c-2">floe install krita</span>   install something
+  <span class="c-2">floe rollback</span>        undo the last transaction
+  <span class="c-2">glacierfetch</span>         system info
+  <span class="c-2">clear</span> · <span class="c-2">whoami</span> · <span class="c-2">uname -a</span> · <span class="c-2">date</span> · <span class="c-2">ls</span> · <span class="c-2">exit</span>`);
+      case 'clear': out.innerHTML=''; return;
+      case 'glacierfetch': case 'neofetch': case 'fastfetch': return fetch();
+      case 'floe': return floe(args);
+      case 'sudo':
+        if(args[0]==='floe'){ print('<span class="c-dim">note: floe never needs sudo — transactions are authorized per-user via polkit.</span>'); return floe(args.slice(1)); }
+        return print('sudo: '+esc(args.join(' ')||'')+': not permitted in this concept','c-err');
+      case 'whoami': return print('you');
+      case 'uname': return print(args.includes('-a')?'Linux glacier 6.12.0-glacier #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux':'Linux');
+      case 'date': return print(new Date().toString());
+      case 'pwd': return print('/home/you');
+      case 'ls': return print('<span class="c-acc">Desktop  Documents  Downloads  Music  Pictures  Projects  Videos</span>  notes.md  floe.toml');
+      case 'echo': return print(esc(args.join(' ')));
+      case 'cat': if(args[0]==='floe.toml') return print(
+`<span class="c-dim"># ~/floe.toml — declarative package set (concept)</span>
+[system]
+channel    = <span class="c-ok">"stable"</span>
+generation = ${generation}
+
+[packages]
+${[...installed].map(p=>`${p.padEnd(12)}= <span class="c-ok">"*"</span>`).join('\n')}`);
+        return print(`cat: ${esc(args[0]||'')}: No such file`,'c-err');
+      case 'exit': closeApp('shell'); return;
+      default:{
+        print(`gsh: command not found: ${esc(c)}`,'c-err');
+        if(pkg(c)&&!installed.has(c)) print(`<span class="c-dim">hint: it's available — run</span> <span class="c-2">floe install ${esc(c)}</span>`);
+        else if(installed.has(c)) print(`<span class="c-dim">(${esc(c)} is installed; GUI/TTY apps aren't simulated in this concept)</span>`);
+      }
+    }
+  }
+  function fetch(){
+    const art=
+`      /\\
+     /  \\    /\\
+    / /\\ \\  /  \\
+   / /  \\ \\/ /\\ \\
+  / /    \\  /  \\ \\
+ /_/      \\/    \\_\\`;
+    const k=(a,b)=>`<span class="c-acc">${a}</span>: ${b}`;
+    print(`<div class="fetch"><pre>${art}</pre><div>${[
+      '<span class="c-acc">you</span>@<span class="c-acc">glacier</span>','<span class="c-dim">──────────────</span>',
+      k('OS','Glacier OS 1.0 “Floe” (concept)'),k('Kernel','6.12 LTS'),k('Shell','gsh 0.1'),k('Desktop','Frost (Wayland)'),
+      k('Theme','Liquid Glass'),k('Packages',`${installed.size} (floe) · gen ${generation}`),k('Resolution',`${innerWidth||screen.width}×${innerHeight||screen.height}`),
+      ['#ff6b7a','#ffcb6b','#3ee08f','#5ac8fa','#8a7dff','#ff6ad5'].map(c=>`<span class="swatch" style="background:${c}"></span>`).join('')
+    ].join('<br>')}</div></div><span class="c-dim">Type</span> <span class="c-2">help</span> <span class="c-dim">to get started.</span>`);
+  }
+  async function floe(a){
+    const sub=a[0], rest=a.slice(1);
+    const head=s=>print(`<span class="c-acc">::</span> ${s}`);
+    switch(sub){
+      case undefined: case 'help': case '--help': case '-h': return print(
+`<span class="c-acc">floe</span> — Glacier's package manager (atomic · signed · rollback-able)
+
+  floe search &lt;query&gt;      find packages
+  floe install &lt;pkg…&gt;      install packages      <span class="c-dim">(alias: add)</span>
+  floe remove &lt;pkg…&gt;       remove packages       <span class="c-dim">(alias: rm)</span>
+  floe list                list installed packages
+  floe info &lt;pkg&gt;          package details
+  floe update              refresh repositories
+  floe upgrade             upgrade everything
+  floe history             list generations
+  floe rollback            revert the last transaction`);
+      case 'search':{
+        const q=rest.join(' ').toLowerCase();
+        const r=REPO.filter(p=>!q||p.id.includes(q)||p.name.toLowerCase().includes(q)||p.desc.toLowerCase().includes(q)||p.cat.toLowerCase()===q);
+        if(!r.length) return print(`no packages match “${esc(q)}”`,'c-warn');
+        r.forEach(p=>print(`<span class="c-2">${p.id.padEnd(14)}</span><span class="c-dim">${p.ver.padEnd(9)}</span>${p.desc}${installed.has(p.id)?' <span class="c-ok">[installed]</span>':''}`));
+        return;
+      }
+      case 'list': case 'ls':
+        head(`${installed.size} packages in generation ${generation}`);
+        [...installed].forEach(id=>{const p=pkg(id);print(`  <span class="c-2">${id.padEnd(14)}</span>${p.ver.padEnd(9)}<span class="c-dim">${fmtSize(p.size)}</span>`)});
+        return;
+      case 'info':{
+        const p=pkg(rest[0]||''); if(!p) return print(`floe: unknown package “${esc(rest[0]||'')}”`,'c-err');
+        return print(`<span class="c-acc">${p.name}</span> <span class="c-dim">(${p.id})</span>
+  version    ${p.ver}
+  category   ${p.cat}
+  size       ${fmtSize(p.size)}
+  depends    ${p.deps.join(', ')||'—'}
+  sandbox    portal-restricted (home: ask)
+  signature  ed25519 · glacier-release-2026
+  status     ${installed.has(p.id)?'<span class="c-ok">installed</span>':'not installed'}
+
+  ${p.desc}`);
+      }
+      case 'update':
+        head('refreshing repositories');
+        for(const r of ['core','extra','community']){const l=print();for(let i=0;i<=24;i+=4){l.innerHTML=`  ${r.padEnd(11)}[${bar(i)}]`;await sleep(30)}}
+        return print('<span class="c-ok">✓</span> repositories up to date');
+      case 'upgrade':
+        head(`checking ${installed.size} installed packages`); await sleep(500);
+        return print('<span class="c-ok">✓</span> everything is up to date — nothing to do');
+      case 'install': case 'add':{
+        if(!rest.length) return print('usage: floe install <pkg…>','c-warn');
+        const bad=rest.filter(n=>!pkg(n));
+        if(bad.length){ print(`floe: unknown package(s): ${esc(bad.join(', '))}`,'c-err'); const s=REPO.filter(p=>bad.some(b=>p.id.includes(b.slice(0,3)))).map(p=>p.id); if(s.length) print(`<span class="c-dim">did you mean:</span> ${s.slice(0,3).join(', ')}`); return; }
+        const todo=rest.filter(n=>!installed.has(n)&&!installing.has(n));
+        rest.filter(n=>installed.has(n)).forEach(n=>print(`<span class="c-dim">${n} is already installed — skipping</span>`));
+        if(!todo.length) return;
+        head('resolving dependencies'); await sleep(350);
+        const deps=[...new Set(todo.flatMap(n=>pkg(n).deps))];
+        const total=todo.reduce((s,n)=>s+pkg(n).size,0)+deps.length*3;
+        print(`  ${todo.map(n=>`<span class="c-2">${n}</span>`).join(' ')}${deps.length?` <span class="c-dim">+ ${deps.length} deps (${deps.join(', ')})</span>`:''}`);
+        print(`  download: ${fmtSize(total)}`);
+        head('fetching');
+        todo.forEach(n=>installing.add(n)); refreshAll();
+        for(const n of todo){
+          const l=print();
+          for(let i=0;i<=24;i++){ l.innerHTML=`  ${n.padEnd(14)}[${bar(i)}] ${String(Math.round(i/24*100)).padStart(3)}%`; progress[n]=i/24*100; $$(`[data-id="${n}"] .busy i`).forEach(b=>b.style.width=progress[n]+'%'); await sleep(18+Math.random()*30); }
+        }
+        print('  verifying ed25519 signatures… <span class="c-ok">ok</span>'); await sleep(220);
+        print(`  building generation ${generation+1}… <span class="c-ok">ok</span>`); await sleep(260);
+        todo.forEach(n=>installing.delete(n));
+        commit('install',todo);
+        print(`<span class="c-ok">✓</span> switched to generation ${generation} — installed ${todo.join(', ')}`);
+        notify(`Installed ${todo.map(n=>pkg(n).name).join(', ')}`,`floe · generation ${generation}`,null,pkg(todo[0]));
+        return;
+      }
+      case 'remove': case 'rm':{
+        if(!rest.length) return print('usage: floe remove <pkg…>','c-warn');
+        const ok=rest.filter(n=>installed.has(n)), miss=rest.filter(n=>!installed.has(n));
+        miss.forEach(n=>print(`${esc(n)} is not installed`,'c-warn'));
+        if(!ok.length) return;
+        head(`removing ${ok.join(', ')}`); await sleep(400);
+        commit('remove',ok);
+        return print(`<span class="c-ok">✓</span> switched to generation ${generation} <span class="c-dim">(undo with: floe rollback)</span>`);
+      }
+      case 'history':
+        head('generations');
+        txlog.slice(-10).forEach(t=>print(`  <span class="c-2">${String(t.gen).padStart(3)}</span>  ${t.t.toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}  ${t.label||t.action} ${t.ids.join(', ')}${t.gen===generation?'  <span class="c-ok">← current</span>':''}`));
+        return;
+      case 'rollback':{
+        const last=txlog.at(-1);
+        if(!last||txlog.length<2) return print('nothing to roll back','c-warn');
+        const inv=last.action==='install'?'remove':'install';
+        head(`rolling back generation ${last.gen} (${last.label||last.action} ${last.ids.join(', ')})`); await sleep(450);
+        commit(inv,last.ids,'rollback:');
+        return print(`<span class="c-ok">✓</span> now on generation ${generation} — state matches generation ${last.gen-1}`);
+      }
+      default: return print(`floe: unknown command “${esc(sub)}” — see floe help`,'c-err');
+    }
+  }
+  fetch();
+}
+
+/* ================= APP: Files ================= */
+function renderFiles(body){
+  const places=[['home','Home'],['files','Desktop'],['doc','Documents'],['down','Downloads'],['image','Pictures'],['music','Music'],['trash','Trash']];
+  const items=[['Desktop','f'],['Documents','f'],['Downloads','f'],['Music','f'],['Pictures','f'],['Projects','f'],['Videos','f'],['notes.md','MD'],['floe.toml','TOML'],['wallpaper.png','PNG']];
+  body.innerHTML=`<div class="split"><aside class="side"><div class="side-h">Places</div>${places.map((p,i)=>`<button class="side-item${i===0?' on':''}">${svg(p[0],15)}${p[1]}</button>`).join('')}
+    <div class="side-h">Devices</div><button class="side-item">${svg('files',15)}System · 512 GB</button></aside>
+    <div class="st-main"><div class="crumbs">${svg('home',14)} <span>you</span> ${svg('chev',12)} <b>Home</b></div>
+    <div class="fgrid">${items.map(([n,t])=>`<button class="fitem">${t==='f'?'<div class="folder"></div>':`<div class="doc">${t}</div>`}<span>${n}</span></button>`).join('')}</div></div></div>`;
+  $$('.fitem',body).forEach(f=>f.onclick=()=>{$$('.fitem',body).forEach(x=>x.classList.toggle('sel',x===f))});
+  $$('.side-item',body).forEach(s=>s.onclick=()=>{$$('.side-item',body).forEach(x=>x.classList.toggle('on',x===s));$('.crumbs b',body).textContent=s.textContent.trim()});
+}
+
+/* ================= APP: Web ================= */
+function renderWeb(body){
+  const tiles=[['W','Wiki','#5b6b8c','#2f3b55'],['M','Maps','#3ee08f','#1d8a5b'],['N','News','#ff6b7a','#c23a4b'],['V','Video','#ff9a3c','#e5367a'],['C','Code','#5ac8fa','#3a5cff'],['F','Forum','#8a7dff','#5a4bff'],['R','Radio','#ffcb6b','#ff8a3a'],['+','Add','#9aa9ba','#566577']];
+  body.innerHTML=`<div class="urlbar"><button class="ctrl">${svg('back',13)}</button><button class="ctrl">${svg('reload',13)}</button><div class="field">${svg('lock',13)}<input value="glacier://start" spellcheck="false" style="text-align:center"></div></div>
+    <div class="start"><h2>Good ${new Date().getHours()<12?'morning':new Date().getHours()<18?'afternoon':'evening'}</h2>
+    <div class="field">${svg('search',15)}<input placeholder="Search the web" spellcheck="false"></div>
+    <div class="tiles">${tiles.map(t=>`<div><i style="background:linear-gradient(135deg,${t[2]},${t[3]})">${t[0]}</i>${t[1]}</div>`).join('')}</div></div>`;
+}
+
+/* ================= APP: Music ================= */
+let musicPlaying=false,musicPos=74,musicTimer=null;const musicLen=213;
+function toggleMusic(){
+  musicPlaying=!musicPlaying;
+  clearInterval(musicTimer);
+  if(musicPlaying) musicTimer=setInterval(()=>{musicPos=(musicPos+1)%musicLen;wins.music&&wins.music.refresh()},1000);
+  wins.music&&wins.music.refresh();
+}
+function renderMusic(body,rec){
+  const mm=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  body.innerHTML=`<div class="music"><div class="cover"></div><div style="text-align:center"><h3>Glass Tides</h3><small>Aurora Field — Refraction</small></div>
+    <div class="prog"><i></i></div><div class="times"><span class="a"></span><span class="b"></span></div>
+    <div class="mctrl"><button>${svg('prev',18)}</button><button class="play"></button><button>${svg('next',18)}</button></div></div>`;
+  $('.play',body).onclick=toggleMusic;
+  rec.refresh=()=>{
+    $('.music',body).classList.toggle('playing',musicPlaying);
+    $('.play',body).innerHTML=svg(musicPlaying?'pause':'play',22);
+    $('.prog i',body).style.width=(musicPos/musicLen*100)+'%';
+    $('.a',body).textContent=mm(musicPos);$('.b',body).textContent='-'+mm(musicLen-musicPos);
+  };
+  rec.refresh();
+}
+
+/* ================= APP: Settings ================= */
+function renderSettings(body,rec){
+  const accents=['#5ac8fa','#8a7dff','#ff6ad5','#ff6b7a','#ffb347','#3ee08f'];
+  const wps=[['aurora','Aurora','#3a7bff','#ff4fa0','#1fe0c0'],['dusk','Dusk','#ff6a3d','#9b5cff','#ff3d7f'],['lagoon','Lagoon','#00c6ff','#00ffa8','#2a5cff']];
+  const secs=['Appearance','Glass','Wallpaper','About'];
+  body.innerHTML=`<div class="split"><aside class="side"><div class="side-h">Settings</div>${secs.map((s,i)=>`<button class="side-item${i===0?' on':''}" data-s="${s}">${s}</button>`).join('')}</aside>
+  <div class="set-main">
+    <div class="set-sec" id="s-Appearance"><h4>Appearance</h4><div class="set-card">
+      <div class="set-row"><div class="lbl"><b>Style</b><small>Frost adapts glass tint to the mode</small></div><div class="seg"><button data-m="dark">Dark</button><button data-m="light">Light</button></div></div>
+      <div class="set-row"><div class="lbl"><b>Accent color</b><small>Buttons, selection, focus rings</small></div><div class="swatches">${accents.map(c=>`<button class="sw" data-c="${c}" style="background:${c}"></button>`).join('')}</div></div>
+    </div></div>
+    <div class="set-sec" id="s-Glass"><h4>Liquid Glass</h4><div class="set-card">
+      <div class="set-row"><div class="lbl"><b>Frost (blur)</b><small>Backdrop blur radius</small></div><input type="range" id="g-blur" min="0" max="40"></div>
+      <div class="set-row"><div class="lbl"><b>Tint</b><small>How milky the glass looks</small></div><input type="range" id="g-tint" min="2" max="60"></div>
+      <div class="set-row"><div class="lbl"><b>Refraction</b><small>Lens distortion on the bar, dock and widgets</small></div><button class="toggle" id="g-ref"></button></div>
+    </div></div>
+    <div class="set-sec" id="s-Wallpaper"><h4>Wallpaper</h4><div class="set-card"><div class="wps">${wps.map(w=>`<button class="wp" data-w="${w[0]}" style="background:radial-gradient(circle at 20% 20%,${w[2]},transparent 60%),radial-gradient(circle at 80% 40%,${w[3]},transparent 60%),radial-gradient(circle at 40% 100%,${w[4]},transparent 60%),#0b1020"><span>${w[1]}</span></button>`).join('')}</div></div></div>
+    <div class="set-sec" id="s-About"><h4>About</h4><div class="set-card"><dl class="kv">
+      <dt>System</dt><dd>Glacier OS 1.0 “Floe” — UI concept</dd><dt>Desktop shell</dt><dd>Frost (Wayland compositor)</dd>
+      <dt>Package manager</dt><dd class="ab-pk"></dd><dt>Kernel</dt><dd>Linux 6.12 LTS</dd><dt>Display</dt><dd class="ab-res"></dd>
+    </dl></div></div>
+  </div></div>`;
+  const cs=getComputedStyle(document.documentElement);
+  const blur=$('#g-blur',body), tint=$('#g-tint',body);
+  blur.value=parseInt(document.documentElement.style.getPropertyValue('--blur')||cs.getPropertyValue('--blur'))||22;
+  tint.value=Math.round((parseFloat(document.documentElement.style.getPropertyValue('--tint'))||(isLight()?.38:.16))*100);
+  blur.oninput=()=>{document.documentElement.style.setProperty('--blur',blur.value+'px');paintRange(blur)};
+  tint.oninput=()=>{document.documentElement.style.setProperty('--tint',tint.value/100);paintRange(tint)};
+  $$('.seg button',body).forEach(b=>b.onclick=()=>{document.documentElement.style.removeProperty('--tint');setTheme(b.dataset.m)});
+  $$('.sw',body).forEach(b=>b.onclick=()=>{document.documentElement.style.setProperty('--accent',b.dataset.c);rec.refresh()});
+  $('#g-ref',body).onclick=()=>{document.body.classList.toggle('refract');rec.refresh()};
+  $$('.wp',body).forEach(b=>b.onclick=()=>{document.body.classList.remove('wp-dusk','wp-lagoon');if(b.dataset.w!=='aurora')document.body.classList.add('wp-'+b.dataset.w);rec.refresh()});
+  $$('.side-item',body).forEach(s=>s.onclick=()=>{$$('.side-item',body).forEach(x=>x.classList.toggle('on',x===s));$('#s-'+s.dataset.s,body).scrollIntoView({behavior:'smooth',block:'start'})});
+  rec.refresh=()=>{
+    $$('.seg button',body).forEach(b=>b.classList.toggle('on',(b.dataset.m==='light')===isLight()));
+    const acc=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toLowerCase();
+    $$('.sw',body).forEach(b=>b.classList.toggle('on',b.dataset.c===acc));
+    $('#g-ref',body).classList.toggle('on',document.body.classList.contains('refract'));
+    const wp=document.body.classList.contains('wp-dusk')?'dusk':document.body.classList.contains('wp-lagoon')?'lagoon':'aurora';
+    $$('.wp',body).forEach(b=>b.classList.toggle('on',b.dataset.w===wp));
+    tint.value=Math.round((parseFloat(document.documentElement.style.getPropertyValue('--tint'))||(isLight()?.38:.16))*100);
+    paintRange(blur);paintRange(tint);
+    $('.ab-pk',body).textContent=`floe · ${installed.size} packages · generation ${generation}`;
+    $('.ab-res',body).textContent=`${innerWidth} × ${innerHeight}`;
+  };
+  rec.refresh();
+}
+
+/* ---------------- global input ---------------- */
+document.addEventListener('keydown',e=>{
+  if((e.altKey||e.ctrlKey)&&e.code==='Space'){e.preventDefault();toggleLauncher();return}
+  if(e.key==='Escape'){toggleLauncher(false);toggleCC(false);return}
+  if(!$('#launcher').classList.contains('hidden')){
+    if(e.key==='ArrowDown'){lxSel=Math.min(lxItems.length-1,lxSel+1);drawLauncher();e.preventDefault()}
+    if(e.key==='ArrowUp'){lxSel=Math.max(0,lxSel-1);drawLauncher();e.preventDefault()}
+    if(e.key==='Enter'){lxRun();e.preventDefault()}
+  }
+});
+$('#lx-q').addEventListener('input',()=>{lxSel=0;drawLauncher()});
+$('#launcher').addEventListener('pointerdown',e=>{if(e.target.id==='launcher')toggleLauncher(false)});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#cc')&&!e.target.closest('#topbar'))toggleCC(false)});
+
+/* Refraction relies on SVG filters in backdrop-filter, which only Chromium supports. */
+if(!/Chrome|Chromium|Edg\//.test(navigator.userAgent)) document.body.classList.remove('refract');
+
+/* ---------------- boot ---------------- */
+buildTopbar(); buildDock(); refreshAll();
+(function boot(){
+  const iw=innerWidth, ih=innerHeight;
+  const sw=Math.min(880,iw-40), sh=Math.min(560,ih-170);
+  openApp('store',{x:Math.max(10,Math.round(iw*.04)),y:62,w:sw,h:sh});
+  const tw=Math.min(600,iw-40), th=Math.min(370,ih-170);
+  openApp('shell',{x:Math.max(10,iw-tw-30),y:Math.max(62,ih-th-112),w:tw,h:th});
+})();
+</script>
+</body>
+</html>

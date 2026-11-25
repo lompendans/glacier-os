@@ -1,0 +1,12 @@
+[Unit]
+Description=Create the Glacier OS live user
+Before=getty@tty1.service systemd-user-sessions.service
+ConditionPathExists=!/home/glacier
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/glacier-live-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+# Frost notifications (glass; blur comes from the Hyprland layer rule on "notifications")
+font=Inter 11
+anchor=top-right
+margin=58,14
+width=340
+padding=14
+border-size=1
+border-radius=20
+background-color=#ffffff26
+border-color=#ffffff66
+text-color=#ffffff
+default-timeout=5000
+
+[mode=do-not-disturb]
+invisible=1

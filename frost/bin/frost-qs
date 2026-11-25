@@ -1,0 +1,10 @@
+#!/bin/sh
+# Start a Quickshell config (the Frost shell or the installer).
+#   usage: frost-qs <config dir> [qs options]
+# On the VMware SVGA driver (vmwgfx, used by VirtualBox and VMware) Qt Quick's hardware
+# OpenGL path renders nothing - windows stay invisible without any error - so Quickshell
+# uses Mesa's software renderer there. The compositor itself keeps the GPU.
+if grep -qs '^vmwgfx ' /proc/modules; then
+    export LIBGL_ALWAYS_SOFTWARE=1
+fi
+exec qs -p "$@"

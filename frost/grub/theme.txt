@@ -1,0 +1,56 @@
+# Glacier — liquid-glass GRUB theme
+title-text: ""
+desktop-image: "background.png"
+desktop-image-scale-method: "crop"
+desktop-color: "#070b18"
+terminal-font: "Glacier Regular 16"
+# GRUB's text terminal (e.g. "Booting 'Glacier OS'"): a borderless strip near the bottom,
+# so booting stays on the themed background instead of a black box
+terminal-box: "term_*.png"
+terminal-left: "10%"
+terminal-top: "84%"
+terminal-width: "80%"
+terminal-height: "10%"
+
++ boot_menu {
+    # percentages so the menu fits from 640x480 (BIOS VGA) up to 4K
+    left = 15%
+    top = 32%
+    width = 70%
+    height = 44%
+    menu_pixmap_style = "menu_*.png"
+    item_pixmap_style = ""
+    selected_item_pixmap_style = "select_*.png"
+    item_font = "Glacier Regular 20"
+    selected_item_font = "Glacier Bold 20"
+    item_color = "#c9d3ea"
+    selected_item_color = "#ffffff"
+    item_height = 40
+    item_padding = 14
+    item_spacing = 20
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+    scrollbar = false
+}
+
++ label {
+    id = "__timeout__"
+    left = 0
+    top = 82%
+    width = 100%
+    align = "center"
+    color = "#9fb0d0"
+    font = "Glacier Regular 16"
+    text = "Starting in %d s"
+}
+
++ label {
+    left = 0
+    top = 90%
+    width = 100%
+    align = "center"
+    color = "#7f8fb0"
+    font = "Glacier Regular 16"
+    text = "↑ ↓ choose · Enter boot · e edit"
+}

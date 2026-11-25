@@ -1,0 +1,15 @@
+[Unit]
+Description=Download package lists for floe search
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=900
+StartLimitBurst=30
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/floe refresh
+Restart=on-failure
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target

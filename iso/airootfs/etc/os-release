@@ -1,0 +1,9 @@
+NAME="Glacier OS"
+PRETTY_NAME="Glacier OS 0.1 (Floe)"
+ID=glacier
+ID_LIKE=arch
+VERSION_ID=0.1
+VERSION_CODENAME=floe
+BUILD_ID=rolling
+ANSI_COLOR="38;2;90;200;250"
+LOGO=glacier

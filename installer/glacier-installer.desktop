@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Install Glacier OS
+GenericName=System Installer
+Comment=Install Glacier OS on this computer
+Exec=frost-qs /usr/share/glacier-installer
+Icon=system-software-install
+Terminal=false
+Categories=System;

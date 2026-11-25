@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Runs once at live boot: creates the 'glacier' user (password: glacier) from /etc/skel.
+set -euo pipefail
+id glacier >/dev/null 2>&1 || useradd -m -G wheel,video,input,audio -s /bin/bash glacier
+echo 'glacier:glacier' | chpasswd

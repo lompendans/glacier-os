@@ -1,0 +1,254 @@
+#!/usr/bin/env bash
+# glacier-install — install Glacier OS from the live session onto a whole disk.
+#
+# Offline: copies the live system image (/run/archiso/airootfs), then turns it into a
+# normal installed system (removes the live-only bits, creates the user, installs GRUB).
+# The disk gets a layout that boots on both BIOS and UEFI machines:
+#   1 MiB BIOS boot  |  1 GiB EFI system (FAT32, mounted at /boot)  |  rest: ext4 root
+#
+# usage:
+#   glacier-install --list-disks                    # JSON, for the GUI
+#   glacier-install --disk /dev/sdX --user NAME [--fullname "Full Name"] [--hostname glacier]
+#                   [--timezone Region/City] [--locale en_US.UTF-8] [--keymap us]
+#                   [--autologin] --yes-wipe-disk   < password-on-stdin
+# Prints "PROGRESS <percent> <message>" lines for the GUI; everything else is log output.
+set -euo pipefail
+
+SRC=/run/archiso/airootfs
+BOOTMNT=/run/archiso/bootmnt
+MNT=/mnt/glacier-target
+
+progress() { echo "PROGRESS $1 $2"; }
+die() { echo "ERROR $*" >&2; echo "PROGRESS -1 $*"; exit 1; }
+
+live_disk() { # the disk the live medium was booted from (so we never offer it)
+  local src; src="$(findmnt -no SOURCE "$BOOTMNT" 2>/dev/null || true)"
+  [ -n "$src" ] && lsblk -no PKNAME "$src" 2>/dev/null | head -1 || true
+  [ -n "$src" ] && basename "$src"
+  return 0
+}
+
+list_disks() {
+  local skip; skip="$(live_disk | tr '\n' ' ')"
+  local first=1
+  echo -n "["
+  while read -r name size type model; do
+    [ "$type" = disk ] || continue
+    case "$name" in fd*|loop*|sr*|zram*) continue ;; esac
+    [[ " $skip " == *" $name "* ]] && continue
+    [ $first = 1 ] || echo -n ","
+    first=0
+    model="${model//\"/}"
+    printf '{"path":"/dev/%s","size":"%s","model":"%s"}' "$name" "$size" "${model:-Disk}"
+  done < <(lsblk -dno NAME,SIZE,TYPE,MODEL)
+  echo "]"
+}
+
+part() { # partition N of disk $1 (handles nvme0n1p1 / mmcblk0p1 naming)
+  if [[ "$1" =~ [0-9]$ ]]; then echo "${1}p$2"; else echo "$1$2"; fi
+}
+
+cleanup() {
+  set +e
+  umount -R "$MNT" 2>/dev/null
+}
+
+# ---------- arguments ----------
+DISK="" USER_NAME="" FULLNAME="" HOST="glacier" TZONE="UTC" LOCALE="en_US.UTF-8" KEYMAP="us"
+AUTOLOGIN=0 WIPE=0
+[ $# -gt 0 ] || { sed -n '2,15p' "$0"; exit 1; }
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --list-disks) list_disks; exit 0 ;;
+    --disk) DISK="$2"; shift ;;
+    --user) USER_NAME="$2"; shift ;;
+    --fullname) FULLNAME="$2"; shift ;;
+    --hostname) HOST="$2"; shift ;;
+    --timezone) TZONE="$2"; shift ;;
+    --locale) LOCALE="$2"; shift ;;
+    --keymap) KEYMAP="$2"; shift ;;
+    --autologin) AUTOLOGIN=1 ;;
+    --yes-wipe-disk) WIPE=1 ;;
+    *) die "unknown option: $1" ;;
+  esac
+  shift
+done
+
+# ---------- validation (before touching anything) ----------
+[ "$(id -u)" = 0 ] || die "must run as root"
+[ -d "$SRC/usr" ] || die "live system image not found at $SRC — run this from the Glacier live ISO"
+[ -b "$DISK" ] || die "not a block device: '$DISK'"
+[ "$(lsblk -dno TYPE "$DISK")" = disk ] || die "$DISK is not a whole disk"
+for d in $(live_disk); do [ "/dev/$d" != "$DISK" ] || die "$DISK is the live medium"; done
+[[ "$USER_NAME" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die "invalid user name '$USER_NAME' (lowercase letters, digits, - and _)"
+case "$USER_NAME" in root|bin|daemon|nobody|glacier-live) die "user name '$USER_NAME' is reserved" ;; esac
+[[ "$HOST" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]] || die "invalid hostname '$HOST'"
+[ -e "/usr/share/zoneinfo/$TZONE" ] || die "unknown timezone '$TZONE'"
+grep -q "^#\?${LOCALE//./\\.} " /etc/locale.gen || die "unknown locale '$LOCALE'"
+[[ "$FULLNAME" != *:* ]] || die "full name must not contain ':'"
+[ "$WIPE" = 1 ] || die "refusing to erase $DISK without --yes-wipe-disk"
+IFS= read -r PASSWORD || true
+[ -n "$PASSWORD" ] || die "no password given on stdin"
+
+UEFI=0; [ -d /sys/firmware/efi ] && UEFI=1
+trap cleanup EXIT
+
+# ---------- disk ----------
+progress 2 "Preparing $DISK"
+umount -R "$MNT" 2>/dev/null || true
+for p in $(lsblk -nlpo NAME "$DISK" | tail -n +2); do umount "$p" 2>/dev/null || true; swapoff "$p" 2>/dev/null || true; done
+wipefs -af "$DISK" >/dev/null
+sfdisk --quiet --wipe always "$DISK" <<'EOF'
+label: gpt
+size=1MiB, type=21686148-6449-6E6F-744E-656564454649, name="bios"
+size=1GiB, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name="efi"
+type=4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709, name="glacier"
+EOF
+partprobe "$DISK" 2>/dev/null || true
+udevadm settle
+EFI_PART="$(part "$DISK" 2)"; ROOT_PART="$(part "$DISK" 3)"
+for _ in $(seq 20); do [ -b "$ROOT_PART" ] && break; sleep 0.5; done
+[ -b "$ROOT_PART" ] || die "partition $ROOT_PART did not appear"
+# read the layout back: GRUB's BIOS install needs exactly this partition type
+bios_type="$(lsblk -dno PARTTYPE "$(part "$DISK" 1)" | tr 'A-F' 'a-f')"
+[ "$bios_type" = "21686148-6449-6e6f-744e-656564454649" ] || die "BIOS boot partition has the wrong type ($bios_type)"
+
+progress 5 "Creating file systems"
+mkfs.fat -F 32 -n GLACIEREFI "$EFI_PART" >/dev/null
+mkfs.ext4 -q -F -L glacier "$ROOT_PART"
+mkdir -p "$MNT"
+mount "$ROOT_PART" "$MNT"
+mkdir -p "$MNT/boot"
+mount "$EFI_PART" "$MNT/boot"
+
+# ---------- copy the system ----------
+progress 8 "Copying Glacier OS"
+rsync -aHAX --info=progress2 --no-inc-recursive "$SRC/" "$MNT/" 2>&1 \
+  | tr '\r' '\n' | while read -r line; do
+      if [[ "$line" =~ ([0-9]+)% ]]; then progress $(( 8 + BASH_REMATCH[1] * 62 / 100 )) "Copying Glacier OS"; fi
+    done
+[ -x "$MNT/usr/bin/bash" ] || die "copying the system failed"
+
+progress 71 "Copying the kernel"
+install -m644 "$BOOTMNT/arch/boot/x86_64/vmlinuz-linux" "$MNT/boot/vmlinuz-linux"
+cp /etc/pacman.d/mirrorlist "$MNT/etc/pacman.d/mirrorlist"
+
+# ---------- remove live-only parts ----------
+progress 73 "Removing live-session settings"
+R="$MNT"
+rm -rf \
+  "$R/etc/systemd/system/getty@tty1.service.d" \
+  "$R/etc/systemd/system/glacier-live-user.service" \
+  "$R/etc/systemd/system/glacier-refresh-db.service" \
+  "$R/etc/systemd/system/choose-mirror.service" \
+  "$R/etc/systemd/system/pacman-init.service" \
+  "$R/etc/systemd/system/etc-pacman.d-gnupg.mount" \
+  "$R/etc/systemd/system/livecd-talk.service" \
+  "$R/etc/systemd/system/livecd-alsa-unmuter.service" \
+  "$R/etc/systemd/system/cloud-init.target.wants" \
+  "$R/etc/systemd/system-generators/systemd-gpt-auto-generator" \
+  "$R/etc/systemd/journald.conf.d/volatile-storage.conf" \
+  "$R/etc/systemd/logind.conf.d/do-not-suspend.conf" \
+  "$R/etc/systemd/resolved.conf.d/archiso.conf" \
+  "$R/etc/ssh/sshd_config.d/10-archiso.conf" \
+  "$R/etc/mkinitcpio.conf.d/archiso.conf" \
+  "$R/etc/sudoers.d/glacier-live" \
+  "$R/etc/pacman.d/hooks/uncomment-mirrors.hook" \
+  "$R/root/.automated_script.sh" "$R/root/.zlogin" \
+  "$R/usr/local/bin/choose-mirror" "$R/usr/local/bin/Installation_guide" "$R/usr/local/bin/livecd-sound" \
+  "$R/usr/local/share/livecd-sound" \
+  "$R/usr/local/bin/glacier-live-setup" \
+  "$R/usr/local/bin/glacier-install" "$R/usr/share/glacier-installer" \
+  "$R/usr/share/applications/glacier-installer.desktop"
+for unit in sshd.service hv_fcopy_daemon.service hv_kvp_daemon.service hv_vss_daemon.service \
+            vboxservice.service vmtoolsd.service vmware-vmblock-fuse.service ModemManager.service; do
+  rm -f "$R/etc/systemd/system/multi-user.target.wants/$unit"
+done
+rm -f "$R/etc/systemd/system/dbus-org.freedesktop.ModemManager1.service"
+find "$R/etc/systemd/system" -xtype l -delete          # links to the units removed above
+rm -f "$R/etc/machine-id"
+cat > "$R/etc/motd" <<'EOF'
+Welcome to Glacier OS.  floe help — package manager · Super+Space — launcher
+EOF
+
+# ---------- configure ----------
+progress 76 "Configuring the system"
+genfstab -U "$MNT" > "$MNT/etc/fstab"
+echo "$HOST" > "$MNT/etc/hostname"
+cat > "$MNT/etc/hosts" <<EOF
+127.0.0.1 localhost
+::1       localhost
+127.0.1.1 $HOST.localdomain $HOST
+EOF
+GRUB_ARGS="--target=i386-pc $DISK"
+arch-chroot "$MNT" /bin/bash -s -- "$TZONE" "$LOCALE" "$KEYMAP" "$USER_NAME" "$FULLNAME" <<'CHROOT'
+set -euo pipefail
+TZONE=$1 LOCALE=$2 KEYMAP=$3 USER_NAME=$4 FULLNAME=$5
+systemd-machine-id-setup >/dev/null
+ln -sf "/usr/share/zoneinfo/$TZONE" /etc/localtime
+hwclock --systohc 2>/dev/null || true
+sed -i "s/^#\(${LOCALE//./\\.} \)/\1/" /etc/locale.gen
+locale-gen >/dev/null
+echo "LANG=$LOCALE" > /etc/locale.conf
+echo "KEYMAP=$KEYMAP" > /etc/vconsole.conf
+passwd -l root >/dev/null
+useradd -m -G wheel,video,input,audio -s /bin/bash -c "$FULLNAME" "$USER_NAME"
+install -m440 /dev/stdin /etc/sudoers.d/10-wheel <<< '%wheel ALL=(ALL:ALL) ALL'
+pacman-key --init >/dev/null 2>&1
+pacman-key --populate archlinux >/dev/null 2>&1
+CHROOT
+printf '%s:%s\n' "$USER_NAME" "$PASSWORD" | arch-chroot "$MNT" chpasswd
+
+if [ "$AUTOLOGIN" = 1 ]; then
+  mkdir -p "$MNT/etc/systemd/system/getty@tty1.service.d"
+  cat > "$MNT/etc/systemd/system/getty@tty1.service.d/autologin.conf" <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --noclear --autologin $USER_NAME - \$TERM
+EOF
+fi
+
+progress 82 "Building the boot image"
+# archiso trimmed the kernel preset to a single image; restore Arch's standard one
+cat > "$MNT/etc/mkinitcpio.d/linux.preset" <<'EOF'
+ALL_kver="/boot/vmlinuz-linux"
+PRESETS=('default' 'fallback')
+default_image="/boot/initramfs-linux.img"
+fallback_image="/boot/initramfs-linux-fallback.img"
+fallback_options="-S autodetect"
+EOF
+arch-chroot "$MNT" mkinitcpio -P >/dev/null 2>&1 || die "mkinitcpio failed"
+
+# ---------- bootloader ----------
+progress 92 "Installing the Glacier bootloader"
+mkdir -p "$MNT/boot/grub/themes"
+cp -r "$MNT/usr/share/grub/themes/glacier" "$MNT/boot/grub/themes/glacier"
+sed -i \
+  -e 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Glacier OS"/' \
+  -e 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=4/' \
+  -e 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=3"/' \
+  -e 's/^#\?GRUB_TERMINAL_OUTPUT=.*/GRUB_TERMINAL_OUTPUT="gfxterm"/' \
+  -e 's/^#\?GRUB_GFXMODE=.*/GRUB_GFXMODE=auto/' \
+  -e 's|^#\?GRUB_THEME=.*|GRUB_THEME="/boot/grub/themes/glacier/theme.txt"|' \
+  "$MNT/etc/default/grub"
+grep -q '^GRUB_THEME=' "$MNT/etc/default/grub" || echo 'GRUB_THEME="/boot/grub/themes/glacier/theme.txt"' >> "$MNT/etc/default/grub"
+# BIOS boot code always (the disk then also boots on BIOS machines) ...
+arch-chroot "$MNT" grub-install $GRUB_ARGS >/dev/null 2>&1 || die "grub-install (BIOS) failed"
+# ... and UEFI when booted that way (named entry + the fallback path for fresh firmware)
+if [ "$UEFI" = 1 ]; then
+  arch-chroot "$MNT" grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Glacier >/dev/null 2>&1 \
+    || die "grub-install (UEFI) failed"
+  arch-chroot "$MNT" grub-install --target=x86_64-efi --efi-directory=/boot --removable >/dev/null 2>&1 \
+    || die "grub-install (UEFI fallback) failed"
+fi
+arch-chroot "$MNT" grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1 || die "grub-mkconfig failed"
+# grub-mkconfig titles entries "<GRUB_DISTRIBUTOR> Linux"; show just the OS name
+sed -i 's/Glacier OS Linux/Glacier OS/g; s/Arch Linux/Glacier OS/g' "$MNT/boot/grub/grub.cfg"
+# drop the "Loading Linux …" / "Loading initial ramdisk …" lines so the theme stays clean while booting
+sed -i -E "/^[[:space:]]*echo[[:space:]]+'Loading /d" "$MNT/boot/grub/grub.cfg"
+
+progress 98 "Finishing"
+sync
+umount -R "$MNT"
+trap - EXIT
+progress 100 "Glacier OS is installed"
